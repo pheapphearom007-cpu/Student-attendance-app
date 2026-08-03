@@ -1,8 +1,8 @@
 // ============================================================
 //  SHARED DATA STORE & UTILITIES (CONNECTED TO BACKEND API)
 // ============================================================
-const API_URL = window.location.port === '5000' || window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
-  ? window.location.origin + '/api'
+const API_URL = window.location.protocol.startsWith('http') 
+  ? window.location.origin + '/api' 
   : 'http://localhost:5000/api';
 
 const DB = {
