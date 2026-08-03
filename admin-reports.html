@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Reports — AttendTrack</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="attendance_system.css">
+</head>
+<body>
+
+<div id="app-layout" class="app-layout">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2><i class="ti ti-calendar-check"></i> <span>AttendTrack</span></h2>
+      <span class="role-badge" id="role-badge">Admin</span>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar" id="user-avatar">A</div>
+      <div>
+        <div class="sidebar-user-name" id="user-name-display">Admin</div>
+        <div class="sidebar-user-email" id="user-email-display">phirom007kh@gmail.com</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="logout()"><i class="ti ti-logout"></i><span>Sign out</span></button>
+    </div>
+  </div>
+
+  <div class="main-content" id="main-content">
+    <div class="page-header"><h1>Attendance Reports</h1><p>View and export attendance data.</p></div>
+    <div class="stat-cards" id="stat-cards"></div>
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <div><label>Filter by Class</label><select id="r-class" onchange="renderReportTable()" style="width:180px">
+        <option value="">All Classes</option>
+      </select></div>
+      <div><label>Date From</label><input type="date" id="r-from" onchange="renderReportTable()" style="width:160px"></div>
+      <div><label>Date To</label><input type="date" id="r-to" onchange="renderReportTable()" style="width:160px"></div>
+      <div style="display:flex;align-items:flex-end">
+        <button class="btn btn-success" onclick="exportCSV()"><i class="ti ti-file-export"></i> Export CSV</button>
+      </div>
+    </div>
+    <div class="card" id="report-table-wrap"></div>
+    <div class="card" style="margin-top:16px">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:16px">Student Attendance Summary</h3>
+      <div id="summary-table"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Modal</h3>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="shared-utils.js"></script>
+<script>
+if (!checkAuth()) throw new Error('Unauthorized');
+
+function renderReports() {
+  const att = DB.get('attendance');
+  const students = DB.get('students');
+  const classes = DB.get('classes');
+  const total = att.length;
+  const present = att.filter(a=>a.status==='present').length;
+  const absent = att.filter(a=>a.status==='absent').length;
+  const late = att.filter(a=>a.status==='late').length;
+  const excused = att.filter(a=>a.status==='excused').length;
+  const rate = total ? Math.round(present/total*100) : 0;
+
+  // Stats
+  document.getElementById('stat-cards').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Attendance Rate</div><div class="stat-value stat-blue">${rate}%</div></div>
+    <div class="stat-card"><div class="stat-label">Present</div><div class="stat-value stat-green">${present}</div></div>
+    <div class="stat-card"><div class="stat-label">Absent</div><div class="stat-value stat-red">${absent}</div></div>
+    <div class="stat-card"><div class="stat-label">Late</div><div class="stat-value stat-amber">${late}</div></div>
+    <div class="stat-card"><div class="stat-label">Excused</div><div class="stat-value stat-blue">${excused}</div></div>
+  `;
+
+  // Class filter options
+  const classFilter = document.getElementById('r-class');
+  classFilter.innerHTML = '<option value="">All Classes</option>' + classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+
+  renderReportTable();
+
+  // Student summary
+  studentSummary();
+}
+
+function renderReportTable() {
+  let att = DB.get('attendance');
+  const students = DB.get('students');
+  const classes = DB.get('classes');
+  const classFilter = parseInt(document.getElementById('r-class').value)||0;
+  const fromDate = document.getElementById('r-from').value;
+  const toDate = document.getElementById('r-to').value;
+  if (classFilter) att = att.filter(a=>a.class_id===classFilter);
+  if (fromDate) att = att.filter(a=>a.date>=fromDate);
+  if (toDate) att = att.filter(a=>a.date<=toDate);
+  att = att.slice().reverse();
+  document.getElementById('report-table-wrap').innerHTML = recentAttTable(att);
+}
+
+function studentSummary() {
+  const att = DB.get('attendance');
+  const students = DB.get('students');
+  const classes = DB.get('classes');
+  document.getElementById('summary-table').innerHTML = `<table><thead><tr><th>Student</th><th>Class</th><th>Present</th><th>Absent</th><th>Late</th><th>Rate</th></tr></thead><tbody>
+  ${students.map(s=>{
+    const sa = att.filter(a=>a.student_id===s.id);
+    const p = sa.filter(a=>a.status==='present').length;
+    const ab = sa.filter(a=>a.status==='absent').length;
+    const l = sa.filter(a=>a.status==='late').length;
+    const total = sa.length;
+    const rate = total ? Math.round(p/total*100) : 0;
+    const cl = classes.find(c=>c.id===s.class_id)||{name:'—'};
+    const color = rate>=80?'progress-green':rate>=60?'progress-amber':'progress-red';
+    return `<tr>
+      <td><strong style="font-weight:500">${s.name}</strong></td>
+      <td><span class="badge badge-excused">${cl.name}</span></td>
+      <td style="color:var(--success)">${p}</td>
+      <td style="color:var(--danger)">${ab}</td>
+      <td style="color:var(--warning)">${l}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;min-width:120px">
+          <div class="progress-bar" style="flex:1"><div class="progress-fill ${color}" style="width:${rate}%"></div></div>
+          <span style="font-size:13px;font-weight:500;min-width:36px">${rate}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('')}
+  </tbody></table>`;
+}
+
+function exportCSV() {
+  const att = DB.get('attendance');
+  const students = DB.get('students');
+  const classes = DB.get('classes');
+  let csv = 'Student,Email,Class,Date,Status,Remark\n';
+  att.forEach(a=>{
+    const s = students.find(x=>x.id===a.student_id)||{name:'Unknown',email:''};
+    const c = classes.find(x=>x.id===a.class_id)||{name:'Unknown'};
+    csv += `"${s.name}","${s.email}","${c.name}","${a.date}","${a.status}","${a.remark||''}"\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='attendance_report.csv'; a.click();
+}
+
+renderReports();
+</script>
+</body>
+</html>

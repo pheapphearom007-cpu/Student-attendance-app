@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — AttendTrack</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="attendance_system.css">
+</head>
+<body>
+
+<!-- ===== APP LAYOUT ===== -->
+<div id="app-layout" class="app-layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2><i class="ti ti-calendar-check"></i> <span>AttendTrack</span></h2>
+      <span class="role-badge" id="role-badge">Admin</span>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar" id="user-avatar">A</div>
+      <div>
+        <div class="sidebar-user-name" id="user-name-display">Admin</div>
+        <div class="sidebar-user-email" id="user-email-display">phirom007kh@gmail.com</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="logout()"><i class="ti ti-logout"></i><span>Sign out</span></button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-content" id="main-content">
+    <div class="page-header"><h1>Admin Dashboard</h1><p id="welcome-text">Welcome back!</p></div>
+    <div class="stat-cards" id="stat-cards"></div>
+    <div class="card" style="margin-bottom:20px">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:16px">Recent Attendance (All Classes)</h3>
+      <div id="recent-att-table"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:14px">Classes Overview</h3>
+        <div id="classes-overview"></div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:14px">Quick Actions</h3>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-secondary" style="justify-content:flex-start" onclick="window.location.href='admin-students.html'"><i class="ti ti-user-plus"></i> Add New Student</button>
+          <button class="btn btn-secondary" style="justify-content:flex-start" onclick="window.location.href='admin-teachers.html'"><i class="ti ti-user-check"></i> Add New Teacher</button>
+          <button class="btn btn-secondary" style="justify-content:flex-start" onclick="window.location.href='admin-classes.html'"><i class="ti ti-school"></i> Manage Classes</button>
+          <button class="btn btn-secondary" style="justify-content:flex-start" onclick="window.location.href='admin-reports.html'"><i class="ti ti-file-export"></i> Export Reports</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Modal</h3>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="shared-utils.js"></script>
+<script>
+if (!checkAuth()) throw new Error('Unauthorized');
+
+const user = getCurrentUser();
+document.getElementById('welcome-text').textContent = `Welcome back, ${user.name}!`;
+
+// Render dashboard
+function renderDashboard() {
+  const students = DB.get('students');
+  const teachers = DB.get('teachers');
+  const classes = DB.get('classes');
+  const att = DB.get('attendance');
+  const today = new Date().toISOString().split('T')[0];
+  const todayAtt = att.filter(a=>a.date===today);
+  const presentToday = todayAtt.filter(a=>a.status==='present').length;
+
+  // Stats
+  document.getElementById('stat-cards').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total Students</div><div class="stat-value stat-blue">${students.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Teachers</div><div class="stat-value stat-green">${teachers.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Total Classes</div><div class="stat-value stat-amber">${classes.length}</div></div>
+    <div class="stat-card"><div class="stat-label">Present Today</div><div class="stat-value stat-green">${presentToday}</div></div>
+    <div class="stat-card"><div class="stat-label">Attendance Records</div><div class="stat-value stat-blue">${att.length}</div></div>
+  `;
+
+  // Recent attendance
+  document.getElementById('recent-att-table').innerHTML = recentAttTable(att.slice(-10).reverse());
+
+  // Classes overview
+  document.getElementById('classes-overview').innerHTML = classes.map(c=>{
+    const tc = teachers.find(t=>t.id===c.teacher_id);
+    const sc = students.filter(s=>s.class_id===c.id);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-50)">
+      <div><div style="font-size:14px;font-weight:500">${c.name}</div><div style="font-size:12px;color:var(--gray-600)">${tc?tc.name:'Unassigned'}</div></div>
+      <span class="badge badge-present">${sc.length} students</span>
+    </div>`;
+  }).join('');
+}
+
+renderDashboard();
+</script>
+</body>
+</html>

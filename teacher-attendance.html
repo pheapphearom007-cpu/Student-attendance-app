@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Take Attendance — AttendTrack</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="attendance_system.css">
+</head>
+<body>
+
+<div id="app-layout" class="app-layout">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2><i class="ti ti-calendar-check"></i> <span>AttendTrack</span></h2>
+      <span class="role-badge" id="role-badge">Teacher</span>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar" id="user-avatar">T</div>
+      <div>
+        <div class="sidebar-user-name" id="user-name-display">Teacher</div>
+        <div class="sidebar-user-email" id="user-email-display">teacher@school.com</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="logout()"><i class="ti ti-logout"></i><span>Sign out</span></button>
+    </div>
+  </div>
+
+  <div class="main-content" id="main-content">
+    <div class="page-header"><h1>Take Attendance</h1><p>Mark attendance for your class.</p></div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px"><label>Select Class</label>
+          <select id="att-class" onchange="loadAttStudents()">
+            <option value="">Choose class...</option>
+          </select>
+        </div>
+        <div><label>Date</label><input type="date" id="att-date" style="width:160px"></div>
+      </div>
+    </div>
+    <div id="att-students-area"></div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Modal</h3>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="shared-utils.js"></script>
+<script>
+if (!checkAuth()) throw new Error('Unauthorized');
+
+const user = getCurrentUser();
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('att-date').value = today;
+document.getElementById('att-date').onchange = loadAttStudents;
+
+// Load class options
+const classes = DB.get('classes').filter(c=>c.teacher_id===user.id);
+const classSelect = document.getElementById('att-class');
+classSelect.innerHTML = '<option value="">Choose class...</option>' + classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+
+function loadAttStudents() {
+  const classId = parseInt(document.getElementById('att-class').value)||0;
+  const date = document.getElementById('att-date').value;
+  if (!classId || !date) { document.getElementById('att-students-area').innerHTML=''; return; }
+  const students = DB.get('students').filter(s=>s.class_id===classId);
+  const att = DB.get('attendance');
+  const existing = att.filter(a=>a.class_id===classId && a.date===date);
+
+  if (!students.length) { document.getElementById('att-students-area').innerHTML=`<div class="empty-state"><i class="ti ti-users-off"></i><p>No students in this class.</p></div>`; return; }
+
+  const statuses = ['present','absent','late','excused'];
+  let html = `<div id="att-alert" class="hidden"></div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="font-size:15px;font-weight:600">${students.length} Students</h3>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-secondary btn-sm" onclick="markAll('present')"><i class="ti ti-check"></i> All Present</button>
+          <button class="btn btn-primary" onclick="saveAttendance(${classId},'${date}')"><i class="ti ti-device-floppy"></i> Save Attendance</button>
+        </div>
+      </div>
+      <div class="att-grid" id="att-grid">`;
+  students.forEach(s=>{
+    const ex = existing.find(a=>a.student_id===s.id);
+    const cur = ex ? ex.status : '';
+    html += `<div class="att-row" id="att-row-${s.id}">
+      <div class="avatar" style="width:32px;height:32px;font-size:12px;flex-shrink:0">${s.name.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div class="att-name">${s.name} <span class="att-id">ID:${s.id}</span></div>
+      <div class="status-btns">
+        ${statuses.map(st=>`<button class="status-btn ${cur===st?'selected-'+st:''}" onclick="setStatus(${s.id},'${st}',this)" data-student="${s.id}" data-status="${st}">${st.charAt(0).toUpperCase()+st.slice(1)}</button>`).join('')}
+      </div>
+      <input type="text" placeholder="Remark..." style="width:120px;font-size:12px;padding:5px 8px" id="remark-${s.id}" value="${ex?ex.remark||'':''}">
+    </div>`;
+  });
+  html += `</div></div>`;
+  document.getElementById('att-students-area').innerHTML = html;
+}
+
+function setStatus(studentId, status, btn) {
+  const row = document.getElementById('att-row-'+studentId);
+  row.querySelectorAll('.status-btn').forEach(b=>b.className='status-btn');
+  btn.classList.add('selected-'+status);
+  btn.dataset.active = '1';
+}
+
+function markAll(status) {
+  document.querySelectorAll('.status-btn').forEach(btn=>{
+    if (btn.dataset.status===status) { btn.click(); }
+  });
+}
+
+function saveAttendance(classId, date) {
+  const students = DB.get('students').filter(s=>s.class_id===classId);
+  let att = DB.get('attendance');
+  att = att.filter(a=>!(a.class_id===classId && a.date===date));
+  let saved = 0;
+  students.forEach(s=>{
+    const statusBtn = document.querySelector(`#att-row-${s.id} .status-btn[class*="selected-"]`);
+    if (!statusBtn) return;
+    const status = statusBtn.dataset.status;
+    const remark = document.getElementById('remark-'+s.id)?.value||'';
+    const newId = att.length ? Math.max(...att.map(a=>a.id))+1 : 1;
+    att.push({id:newId+saved, student_id:s.id, class_id:classId, date, status, remark});
+    saved++;
+  });
+  DB.set('attendance', att);
+  const alert = document.getElementById('att-alert');
+  alert.className='alert alert-success';
+  alert.textContent=`✓ Attendance saved for ${saved} students.`;
+  alert.classList.remove('hidden');
+  setTimeout(()=>alert.classList.add('hidden'),3000);
+}
+</script>
+</body>
+</html>

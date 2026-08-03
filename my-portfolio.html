@@ -1,0 +1,412 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHEAP PHIROM — Portfolio</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="attendance_system.css">
+<style>
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #f8f8f8;
+    background: radial-gradient(circle at top left, rgba(255,255,255,0.12), transparent 26%),
+                linear-gradient(180deg, rgba(7, 21, 47, 0.82), rgba(10, 16, 27, 0.96));
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: url('12185247-three-dancing-apsara-on-the-wall-in-angkor-wat-siem-reap-cambodia.jpg') center/cover no-repeat;
+    filter: grayscale(1) contrast(1.15) brightness(0.36);
+    opacity: 0.98;
+    z-index: -2;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.10), transparent 20%),
+                radial-gradient(circle at 80% 80%, rgba(10,16,27,0.70), transparent 30%);
+    z-index: -1;
+  }
+
+  .portfolio-page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 48px 32px 72px;
+  }
+
+  .top-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255,255,255,0.92);
+    text-decoration: none;
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .top-link i {
+    font-size: 18px;
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 32px;
+    align-items: center;
+  }
+
+  .hero-left {
+    display: grid;
+    gap: 20px;
+  }
+
+  .hero-tag {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    color: rgba(255,255,255,0.82);
+    font-size: 12px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+  }
+
+  .hero-tag span {
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 999px;
+    padding: 10px 14px;
+  }
+
+  .hero-title {
+    font-size: clamp(3.4rem, 5.2vw, 5.4rem);
+    line-height: 0.95;
+    letter-spacing: -0.06em;
+    color: #ffffff;
+    max-width: 720px;
+  }
+
+  .hero-copy {
+    max-width: 700px;
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.82);
+  }
+
+  .hero-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    gap: 18px;
+    margin-top: 24px;
+  }
+
+  .meta-card {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 28px;
+    padding: 22px;
+    color: #f8f8f8;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.18);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  .meta-card strong {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: rgba(255,255,255,0.78);
+  }
+
+  .meta-card span {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.88);
+  }
+
+  .hero-right {
+    display: grid;
+    gap: 22px;
+  }
+
+  .profile-shell {
+    position: relative;
+    border-radius: 50%;
+    width: min(360px, 100%);
+    aspect-ratio: 1;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.08);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 40px 90px rgba(0,0,0,0.32);
+  }
+
+  .profile-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.18), transparent 38%);
+    pointer-events: none;
+  }
+
+  .profile-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .profile-card {
+    display: grid;
+    gap: 16px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 32px;
+    padding: 28px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.22);
+  }
+
+  .profile-card h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #ffffff;
+  }
+
+  .profile-card p {
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.75;
+    color: rgba(255,255,255,0.86);
+  }
+
+  .profile-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+    gap: 12px;
+  }
+
+  .stat-block {
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 22px;
+    padding: 18px;
+  }
+
+  .stat-block strong {
+    display: block;
+    font-size: 11px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: rgba(255,255,255,0.75);
+  }
+
+  .stat-block span {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #ffffff;
+  }
+
+  .section {
+    margin-top: 40px;
+    display: grid;
+    gap: 22px;
+  }
+
+  .section.glass {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 32px;
+    padding: 32px;
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    box-shadow: 0 28px 70px rgba(0,0,0,0.20);
+  }
+
+  .section h2 {
+    margin: 0;
+    font-size: clamp(2rem, 3vw, 2.6rem);
+    color: #ffffff;
+  }
+
+  .section p,
+  .section ul {
+    margin: 0;
+    color: rgba(255,255,255,0.86);
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+
+  .section ul {
+    list-style: none;
+    padding-left: 0;
+    display: grid;
+    gap: 14px;
+  }
+
+  .section li {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .section li::before {
+    content: '';
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: #ffffff;
+    opacity: 0.85;
+    box-shadow: 0 0 0 6px rgba(255,255,255,0.08);
+    margin-top: 5px;
+  }
+
+  .contact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+    gap: 20px;
+  }
+
+  .contact-card {
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 28px;
+    padding: 28px;
+    color: #ffffff;
+  }
+
+  .contact-card strong {
+    display: block;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: .11em;
+    color: rgba(255,255,255,0.78);
+  }
+
+  .contact-card a,
+  .contact-card span {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: rgba(255,255,255,0.92);
+    text-decoration: none;
+  }
+
+  @media (max-width: 960px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-meta { grid-template-columns: 1fr; }
+    .profile-stats { grid-template-columns: 1fr 1fr; }
+    .contact-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 700px) {
+    .portfolio-page { padding: 28px 20px 52px; }
+    .hero-title { font-size: 3.2rem; }
+  }
+</style>
+</head>
+<body>
+  <div class="portfolio-page">
+    <a href="attendance_system.html" class="top-link"><i class="ti ti-arrow-left"></i> Back to Login</a>
+    <div class="hero">
+      <div class="hero-left">
+        <div class="hero-tag"><span>Khmer-inspired portfolio</span><span>Web developer</span><span>Modern minimal UI</span></div>
+        <h1 class="hero-title">PHEAP PHIROM</h1>
+        <p class="hero-copy">I am a young web developer from Siem Reap crafting clean digital experiences with discipline, clarity, and a calm design sense. My work combines strong structure with elegant visual details inspired by Cambodian heritage.</p>
+        <div class="hero-meta">
+          <div class="meta-card">
+            <strong>Role</strong>
+            <span>Junior Web Developer</span>
+          </div>
+          <div class="meta-card">
+            <strong>Approach</strong>
+            <span>Organized, respectful, detail-oriented, and learning continuously.</span>
+          </div>
+          <div class="meta-card">
+            <strong>Core skills</strong>
+            <span>HTML, CSS, JavaScript, UI structure, clean layout systems.</span>
+          </div>
+          <div class="meta-card">
+            <strong>Location</strong>
+            <span>Siem Reap, Cambodia</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="profile-shell">
+          <img src="photo_2026-06-14_22-37-49.jpg" alt="PHEAP PHIROM" class="profile-image">
+        </div>
+        <div class="profile-card">
+          <h2>Profile</h2>
+          <p>PHEAP PHIROM is a young Asian web developer with a calm presence, keen attention to detail, and a modern design mindset. He focuses on polished interfaces that feel organized, professional, and approachable.</p>
+          <div class="profile-stats">
+            <div class="stat-block">
+              <strong>Experience</strong>
+              <span>Web fundamentals</span>
+            </div>
+            <div class="stat-block">
+              <strong>Focus</strong>
+              <span>User interface & front-end logic</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="section glass">
+      <h2>About Me</h2>
+      <p>I graduated from Athipadei High School in 2025 and I am building my skills through thoughtful projects and disciplined practice. I prioritize professional communication, clean code, and reliable design work.</p>
+    </section>
+
+    <section class="section glass">
+      <h2>Skills</h2>
+      <ul>
+        <li>HTML5 and semantic markup with modern layout principles</li>
+        <li>Responsive CSS and polished interface design</li>
+        <li>JavaScript interaction patterns and user-focused behavior</li>
+        <li>Clear logic, structure, attention to detail, and rapid learning</li>
+      </ul>
+    </section>
+
+    <section class="section glass">
+      <h2>Goals</h2>
+      <ul>
+        <li>Develop polished web projects with strong structure and visual clarity</li>
+        <li>Grow technical skills through practical development work</li>
+        <li>Collaborate with teams that value respect and consistent improvement</li>
+        <li>Create dependable, elegant digital experiences for real users</li>
+      </ul>
+    </section>
+
+    <section class="section glass">
+      <h2>Contact</h2>
+      <div class="contact-grid">
+        <div class="contact-card">
+          <strong>Email</strong>
+          <a href="mailto:pheapphearom007@gmail.com">pheapphearom007@gmail.com</a>
+        </div>
+        <div class="contact-card">
+          <strong>Phone / Telegram</strong>
+          <span>+855 16 988 154</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

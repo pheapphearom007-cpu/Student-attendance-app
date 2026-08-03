@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Dashboard — AttendTrack</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="attendance_system.css">
+</head>
+<body>
+
+<div id="app-layout" class="app-layout">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2><i class="ti ti-calendar-check"></i> <span>AttendTrack</span></h2>
+      <span class="role-badge" id="role-badge">Student</span>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar" id="user-avatar">S</div>
+      <div>
+        <div class="sidebar-user-name" id="user-name-display">Student</div>
+        <div class="sidebar-user-email" id="user-email-display">student@school.com</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="logout()"><i class="ti ti-logout"></i><span>Sign out</span></button>
+    </div>
+  </div>
+
+  <div class="main-content" id="main-content">
+    <div class="page-header"><h1>My Dashboard</h1><p id="welcome-text">Welcome!</p></div>
+    <div class="stat-cards" id="stat-cards"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:14px">My Class Info</h3>
+        <div id="class-info"></div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:14px">Attendance Rate</h3>
+        <div id="att-rate"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:14px">Recent Attendance</h3>
+      <div id="recent-att"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Modal</h3>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="shared-utils.js"></script>
+<script>
+if (!checkAuth()) throw new Error('Unauthorized');
+
+const user = getCurrentUser();
+document.getElementById('welcome-text').textContent = `Welcome, ${user.name}!`;
+
+function renderDashboard() {
+  const att = DB.get('attendance').filter(a=>a.student_id===user.id);
+  const cl = DB.get('classes').find(c=>c.id===user.class_id)||{name:'—'};
+  const t = DB.get('teachers').find(x=>x.id===cl.teacher_id)||{name:'—'};
+  const p = att.filter(a=>a.status==='present').length;
+  const total = att.length;
+  const rate = total ? Math.round(p/total*100) : 0;
+  const color = rate>=80?'stat-green':rate>=60?'stat-amber':'stat-red';
+
+  // Stats
+  document.getElementById('stat-cards').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Attendance Rate</div><div class="stat-value ${color}">${rate}%</div></div>
+    <div class="stat-card"><div class="stat-label">Total Classes</div><div class="stat-value stat-blue">${total}</div></div>
+    <div class="stat-card"><div class="stat-label">Present</div><div class="stat-value stat-green">${p}</div></div>
+    <div class="stat-card"><div class="stat-label">Absent</div><div class="stat-value stat-red">${att.filter(a=>a.status==='absent').length}</div></div>
+  `;
+
+  // Class info
+  document.getElementById('class-info').innerHTML = `
+    <div style="line-height:2;font-size:14px">
+      <div><span style="color:var(--gray-600)">Class:</span> <strong>${cl.name}</strong></div>
+      <div><span style="color:var(--gray-600)">Teacher:</span> <strong>${t.name}</strong></div>
+      <div><span style="color:var(--gray-600)">Email:</span> ${user.email}</div>
+      <div><span style="color:var(--gray-600)">Phone:</span> ${user.phone||'—'}</div>
+    </div>
+  `;
+
+  // Attendance rate chart
+  document.getElementById('att-rate').innerHTML = `
+    <div style="text-align:center;padding:10px 0">
+      <div style="font-size:48px;font-weight:700;color:${rate>=80?'var(--success)':rate>=60?'var(--amber)':'var(--danger)'}">${rate}%</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-top:4px">${rate>=80?'Excellent! Keep it up!':rate>=60?'You can do better.':'At risk — please attend more classes.'}</div>
+      <div class="progress-bar" style="margin-top:14px">
+        <div class="progress-fill ${rate>=80?'progress-green':rate>=60?'progress-amber':'progress-red'}" style="width:${rate}%"></div>
+      </div>
+    </div>
+  `;
+
+  // Recent attendance
+  document.getElementById('recent-att').innerHTML = recentAttTable(att.slice(-8).reverse());
+}
+
+renderDashboard();
+</script>
+</body>
+</html>

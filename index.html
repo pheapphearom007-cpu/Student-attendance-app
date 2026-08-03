@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to My Website</title>
+    <style>
+        /* Reset default browser styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body styling with a modern dark gradient background */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* Container for the welcome card */
+        .welcome-container {
+            padding: 2.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            letter-spacing: 1px;
+        }
+
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        /* Button styling */
+        .btn-enter {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1e3c72;
+            background-color: #ffffff;
+            text-decoration: none;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Button hover animation */
+        .btn-enter:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-enter:active {
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="welcome-container">
+        <h1>Welcome!</h1>
+        <p>Discover everything you need in one place. Click the button below to step inside and explore our main platform.</p>
+        
+        <a href="attendance_system.html" class="btn-enter">Get Started</a>
+    </div>
+
+</body>
+</html>
