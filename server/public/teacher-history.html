@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance History — AttendTrack</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="attendance_system.css">
+</head>
+<body>
+
+<div id="app-layout" class="app-layout">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2><i class="ti ti-calendar-check"></i> <span>AttendTrack</span></h2>
+      <span class="role-badge" id="role-badge">Teacher</span>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar" id="user-avatar">T</div>
+      <div>
+        <div class="sidebar-user-name" id="user-name-display">Teacher</div>
+        <div class="sidebar-user-email" id="user-email-display">teacher@school.com</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="logout()"><i class="ti ti-logout"></i><span>Sign out</span></button>
+    </div>
+  </div>
+
+  <div class="main-content" id="main-content">
+    <div class="page-header"><h1>Attendance History</h1><p>Review past attendance records for your classes.</p></div>
+    <div class="card">
+      <div style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <select id="h-class" onchange="filterHistory()" style="width:160px">
+          <option value="">All Classes</option>
+        </select>
+        <input type="date" id="h-date" onchange="filterHistory()" style="width:150px">
+      </div>
+      <div id="history-table"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Modal</h3>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="shared-utils.js"></script>
+<script>
+if (!checkAuth()) throw new Error('Unauthorized');
+
+const user = getCurrentUser();
+const classes = DB.get('classes').filter(c=>c.teacher_id===user.id);
+
+// Load class options
+const classSelect = document.getElementById('h-class');
+classSelect.innerHTML = '<option value="">All Classes</option>' + classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+
+let att = DB.get('attendance').filter(a=>classes.some(c=>c.id===a.class_id));
+document.getElementById('history-table').innerHTML = recentAttTable(att.slice().reverse().slice(0,20));
+
+function filterHistory() {
+  const classId = parseInt(document.getElementById('h-class').value)||0;
+  const date = document.getElementById('h-date').value;
+  let filtered = DB.get('attendance').filter(a=>classes.some(c=>c.id===a.class_id));
+  if (classId) filtered = filtered.filter(a=>a.class_id===classId);
+  if (date) filtered = filtered.filter(a=>a.date===date);
+  document.getElementById('history-table').innerHTML = recentAttTable(filtered.slice().reverse());
+}
+</script>
+</body>
+</html>

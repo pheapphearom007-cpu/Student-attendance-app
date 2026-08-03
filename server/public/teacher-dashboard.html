@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Dashboard — AttendTrack</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="attendance_system.css">
+</head>
+<body>
+
+<div id="app-layout" class="app-layout">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2><i class="ti ti-calendar-check"></i> <span>AttendTrack</span></h2>
+      <span class="role-badge" id="role-badge">Teacher</span>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar" id="user-avatar">T</div>
+      <div>
+        <div class="sidebar-user-name" id="user-name-display">Teacher</div>
+        <div class="sidebar-user-email" id="user-email-display">teacher@school.com</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="logout()"><i class="ti ti-logout"></i><span>Sign out</span></button>
+    </div>
+  </div>
+
+  <div class="main-content" id="main-content">
+    <div class="page-header"><h1>Teacher Dashboard</h1><p id="welcome-text">Welcome!</p></div>
+    <div class="stat-cards" id="stat-cards"></div>
+    <div class="card" style="margin-bottom:20px">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:14px">My Classes</h3>
+      <div id="my-classes"></div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:14px">Recent Attendance</h3>
+      <div id="recent-att"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Modal</h3>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="shared-utils.js"></script>
+<script>
+if (!checkAuth()) throw new Error('Unauthorized');
+
+const user = getCurrentUser();
+document.getElementById('welcome-text').textContent = `Welcome, ${user.name}!`;
+
+function renderDashboard() {
+  const classes = DB.get('classes').filter(c=>c.teacher_id===user.id);
+  const students = DB.get('students');
+  const att = DB.get('attendance');
+  const today = new Date().toISOString().split('T')[0];
+
+  // Stats
+  document.getElementById('stat-cards').innerHTML = `
+    <div class="stat-card"><div class="stat-label">My Classes</div><div class="stat-value stat-blue">${classes.length}</div></div>
+    <div class="stat-card"><div class="stat-label">My Students</div><div class="stat-value stat-green">${students.filter(s=>classes.some(c=>c.id===s.class_id)).length}</div></div>
+    <div class="stat-card"><div class="stat-label">Records Today</div><div class="stat-value stat-amber">${att.filter(a=>a.date===today&&classes.some(c=>c.id===a.class_id)).length}</div></div>
+  `;
+
+  // My classes
+  document.getElementById('my-classes').innerHTML = classes.length ? classes.map(c=>{
+    const sc = students.filter(s=>s.class_id===c.id);
+    const todayDone = att.filter(a=>a.class_id===c.id&&a.date===today).length;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-50)">
+      <div>
+        <div style="font-size:14px;font-weight:500">${c.name}</div>
+        <div style="font-size:12px;color:var(--gray-600)">${sc.length} students · ${todayDone>0?'<span style="color:var(--success)">Attendance taken today</span>':'<span style="color:var(--warning)">Pending today</span>'}</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="window.location.href='teacher-attendance.html'"><i class="ti ti-calendar-plus"></i> Take Attendance</button>
+    </div>`;
+  }).join('') : '<div class="empty-state"><i class="ti ti-school-off"></i><p>No classes assigned yet.</p></div>';
+
+  // Recent attendance
+  document.getElementById('recent-att').innerHTML = recentAttTable(att.filter(a=>classes.some(c=>c.id===a.class_id)).slice(-8).reverse());
+}
+
+renderDashboard();
+</script>
+</body>
+</html>

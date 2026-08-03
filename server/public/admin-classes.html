@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Classes — AttendTrack</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="attendance_system.css">
+</head>
+<body>
+
+<div id="app-layout" class="app-layout">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2><i class="ti ti-calendar-check"></i> <span>AttendTrack</span></h2>
+      <span class="role-badge" id="role-badge">Admin</span>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar" id="user-avatar">A</div>
+      <div>
+        <div class="sidebar-user-name" id="user-name-display">Admin</div>
+        <div class="sidebar-user-email" id="user-email-display">phirom007kh@gmail.com</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="logout()"><i class="ti ti-logout"></i><span>Sign out</span></button>
+    </div>
+  </div>
+
+  <div class="main-content" id="main-content">
+    <div class="page-header"><h1>Manage Classes</h1><p>Create and assign classes to teachers.</p></div>
+    <div style="margin-bottom:16px"><button class="btn btn-primary" onclick="openClassModal()"><i class="ti ti-plus"></i> Create Class</button></div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Class Name</th><th>Assigned Teacher</th><th>Students</th><th>Actions</th></tr></thead>
+        <tbody id="classes-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Modal</h3>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="shared-utils.js"></script>
+<script>
+if (!checkAuth()) throw new Error('Unauthorized');
+
+function renderClasses() {
+  const classes = DB.get('classes');
+  const teachers = DB.get('teachers');
+  const students = DB.get('students');
+  document.getElementById('classes-table').innerHTML = classes.map(c => {
+    const teacher = teachers.find(t => t.id === c.teacher_id);
+    const studentCount = students.filter(s => s.class_id === c.id).length;
+    return `<tr>
+      <td><strong style="font-weight:500">${c.name}</strong></td>
+      <td>${teacher ? teacher.name : '<span style="color:var(--gray-400)">Unassigned</span>'}</td>
+      <td><span class="badge badge-present">${studentCount} students</span></td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="openClassModal(${c.id})"><i class="ti ti-edit"></i> Edit</button>
+        <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteClass(${c.id})"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4"><div class="empty-state"><i class="ti ti-school-off"></i><p>No classes yet.</p></div></td></tr>';
+}
+
+function openClassModal(id = null) {
+  const teachers = DB.get('teachers');
+  const cls = id ? DB.get('classes').find(x => x.id === id) : null;
+  document.getElementById('modal-title').textContent = cls ? 'Edit Class' : 'Create Class';
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-group"><label>Class Name</label><input id="m-cname" value="${cls ? cls.name : ''}" placeholder="e.g. Grade 10-A"></div>
+    <div class="form-group"><label>Assign Teacher</label><select id="m-tid">
+      <option value="">No Teacher</option>
+      ${teachers.map(t => `<option value="${t.id}" ${cls && cls.teacher_id === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
+    </select></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary" onclick="saveClass(${id || 0})"><i class="ti ti-check"></i> Save</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    </div>`;
+  showModal();
+}
+
+function saveClass(id) {
+  const name = document.getElementById('m-cname').value.trim();
+  const teacher_id = parseInt(document.getElementById('m-tid').value) || null;
+  if (!name) { alert('Class name is required.'); return; }
+  const classes = DB.get('classes');
+  if (id) {
+    const idx = classes.findIndex(c => c.id === id);
+    if (idx >= 0) classes[idx] = { ...classes[idx], name, teacher_id };
+  } else {
+    const newId = classes.length ? Math.max(...classes.map(c => c.id)) + 1 : 1;
+    classes.push({ id: newId, name, teacher_id });
+  }
+  DB.set('classes', classes);
+  closeModal();
+  renderClasses();
+}
+
+function deleteClass(id) {
+  if (!confirm('Delete this class?')) return;
+  DB.set('classes', DB.get('classes').filter(c => c.id !== id));
+  renderClasses();
+}
+
+renderClasses();
+</script>
+</body>
+</html>

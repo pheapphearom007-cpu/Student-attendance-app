@@ -3,16 +3,25 @@ const cors = require('cors');
 const path = require('path');
 const db = require('./db');
 
+const fs = require('fs');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend files (HTML, CSS, JS, Images)
+// Serve static frontend files from 'public' directory and root
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, '../')));
 
 // Default root route opens attendance_system.html
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../attendance_system.html'));
+  const publicPath = path.join(__dirname, 'public', 'attendance_system.html');
+  const rootPath = path.join(__dirname, '../attendance_system.html');
+  if (fs.existsSync(publicPath)) {
+    res.sendFile(publicPath);
+  } else {
+    res.sendFile(rootPath);
+  }
 });
 
 console.log('SQLite Database connected and ready.');

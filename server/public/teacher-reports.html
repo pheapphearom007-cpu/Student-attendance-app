@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class Reports — AttendTrack</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="attendance_system.css">
+</head>
+<body>
+
+<div id="app-layout" class="app-layout">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h2><i class="ti ti-calendar-check"></i> <span>AttendTrack</span></h2>
+      <span class="role-badge" id="role-badge">Teacher</span>
+    </div>
+    <div class="sidebar-user">
+      <div class="avatar" id="user-avatar">T</div>
+      <div>
+        <div class="sidebar-user-name" id="user-name-display">Teacher</div>
+        <div class="sidebar-user-email" id="user-email-display">teacher@school.com</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    <div class="sidebar-footer">
+      <button class="nav-item" onclick="logout()"><i class="ti ti-logout"></i><span>Sign out</span></button>
+    </div>
+  </div>
+
+  <div class="main-content" id="main-content">
+    <div class="page-header"><h1>Class Reports</h1><p>Attendance summary for your classes.</p></div>
+    <div id="reports-area"></div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Modal</h3>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="shared-utils.js"></script>
+<script>
+if (!checkAuth()) throw new Error('Unauthorized');
+
+const user = getCurrentUser();
+const classes = DB.get('classes').filter(c=>c.teacher_id===user.id);
+const students = DB.get('students');
+const att = DB.get('attendance').filter(a=>classes.some(c=>c.id===a.class_id));
+
+document.getElementById('reports-area').innerHTML = classes.map(c=>{
+  const sc = students.filter(s=>s.class_id===c.id);
+  const ca = att.filter(a=>a.class_id===c.id);
+  return `<div class="card" style="margin-bottom:16px">
+    <h3 style="font-size:15px;font-weight:600;margin-bottom:14px">${c.name}</h3>
+    <table><thead><tr><th>Student</th><th>Present</th><th>Absent</th><th>Late</th><th>Rate</th></tr></thead><tbody>
+    ${sc.map(s=>{
+      const sa = ca.filter(a=>a.student_id===s.id);
+      const p = sa.filter(a=>a.status==='present').length;
+      const ab = sa.filter(a=>a.status==='absent').length;
+      const l = sa.filter(a=>a.status==='late').length;
+      const total = sa.length;
+      const rate = total ? Math.round(p/total*100) : 0;
+      const color = rate>=80?'progress-green':rate>=60?'progress-amber':'progress-red';
+      return `<tr>
+        <td>${s.name}</td>
+        <td style="color:var(--success)">${p}</td>
+        <td style="color:var(--danger)">${ab}</td>
+        <td style="color:var(--warning)">${l}</td>
+        <td><div style="display:flex;align-items:center;gap:8px">
+          <div class="progress-bar" style="width:80px"><div class="progress-fill ${color}" style="width:${rate}%"></div></div>
+          <span style="font-size:13px;font-weight:500">${rate}%</span>
+        </div></td>
+      </tr>`;
+    }).join('')||`<tr><td colspan="5"><div class="empty-state" style="padding:16px"><i class="ti ti-users-off"></i><p>No students.</p></div></td></tr>`}
+    </tbody></table>
+  </div>`;
+}).join('')||`<div class="empty-state"><i class="ti ti-school-off"></i><p>No classes assigned.</p></div>`;
+</script>
+</body>
+</html>
