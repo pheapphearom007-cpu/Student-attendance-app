@@ -11,6 +11,7 @@ pages.manageStudents = function(search='') {
     <div class="search-bar">
       <input type="text" placeholder="Search students..." id="student-search" value="${search}" oninput="pages.manageStudents(this.value)">
       <button class="btn btn-primary" onclick="openStudentModal()"><i class="ti ti-user-plus"></i> Add Student</button>
+      <button class="btn btn-success" onclick="exportStudentsCSV()"><i class="ti ti-file-export"></i> Export Excel</button>
     </div>
     <div class="card">
       <table><thead><tr><th>Name</th><th>Email</th><th>Class</th><th>Phone</th><th>Actions</th></tr></thead><tbody>
@@ -30,6 +31,22 @@ pages.manageStudents = function(search='') {
       </tbody></table>
     </div>`;
 };
+
+function exportStudentsCSV() {
+  const students = DB.get('students');
+  const classes = DB.get('classes');
+  let csv = 'ID,Name,Email,Class,Phone\n';
+  students.forEach(s => {
+    const cl = classes.find(c => c.id === s.class_id) || { name: 'Unassigned' };
+    csv += `"${s.id}","${s.name}","${s.email}","${cl.name}","${s.phone || ''}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'students_list.csv';
+  a.click();
+}
 
 function openStudentModal(id=null) {
   const classes = DB.get('classes');

@@ -7,7 +7,10 @@ pages.manageTeachers = function() {
   const classes = DB.get('classes');
   mc().innerHTML = `
     <div class="page-header"><h1>Manage Teachers</h1><p>Add, edit, or remove teachers.</p></div>
-    <div style="margin-bottom:16px"><button class="btn btn-primary" onclick="openTeacherModal()"><i class="ti ti-user-plus"></i> Add Teacher</button></div>
+    <div style="margin-bottom:16px;display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="openTeacherModal()"><i class="ti ti-user-plus"></i> Add Teacher</button>
+      <button class="btn btn-success" onclick="exportTeachersCSV()"><i class="ti ti-file-export"></i> Export Excel</button>
+    </div>
     <div class="card">
       <table><thead><tr><th>Name</th><th>Email</th><th>Subject</th><th>Classes</th><th>Actions</th></tr></thead><tbody>
       ${teachers.map(t=>{
@@ -26,6 +29,20 @@ pages.manageTeachers = function() {
       </tbody></table>
     </div>`;
 };
+
+function exportTeachersCSV() {
+  const teachers = DB.get('teachers');
+  let csv = 'ID,Name,Email,Subject\n';
+  teachers.forEach(t => {
+    csv += `"${t.id}","${t.name}","${t.email}","${t.subject || ''}"\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'teachers_list.csv';
+  a.click();
+}
 
 function openTeacherModal(id=null) {
   const t = id ? DB.get('teachers').find(x=>x.id===id) : null;

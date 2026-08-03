@@ -259,6 +259,66 @@ app.post('/api/sync/:key', (req, res) => {
   }
 });
 
+// -------------------------------------------------------------
+//  EXCEL / CSV EXPORT ENDPOINTS
+// -------------------------------------------------------------
+app.get('/api/export/attendance.csv', (req, res) => {
+  try {
+    const attendance = db.prepare('SELECT * FROM attendance').all();
+    const students = db.prepare('SELECT * FROM students').all();
+    const classes = db.prepare('SELECT * FROM classes').all();
+
+    let csv = 'ID,Student Name,Student Email,Class,Date,Status,Remark\n';
+    attendance.forEach(a => {
+      const s = students.find(x => x.id === a.student_id) || { name: 'Unknown', email: '' };
+      const c = classes.find(x => x.id === a.class_id) || { name: 'Unknown' };
+      csv += `"${a.id}","${s.name}","${s.email}","${c.name}","${a.date}","${a.status}","${a.remark || ''}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="attendance_records.csv"');
+    res.status(200).send(csv);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/export/students.csv', (req, res) => {
+  try {
+    const students = db.prepare('SELECT * FROM students').all();
+    const classes = db.prepare('SELECT * FROM classes').all();
+
+    let csv = 'ID,Name,Email,Class,Phone\n';
+    students.forEach(s => {
+      const c = classes.find(x => x.id === s.class_id) || { name: 'Unassigned' };
+      csv += `"${s.id}","${s.name}","${s.email}","${c.name}","${s.phone || ''}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="students_list.csv"');
+    res.status(200).send(csv);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/export/teachers.csv', (req, res) => {
+  try {
+    const teachers = db.prepare('SELECT * FROM teachers').all();
+
+    let csv = 'ID,Name,Email,Subject\n';
+    teachers.forEach(t => {
+      csv += `"${t.id}","${t.name}","${t.email}","${t.subject || ''}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="teachers_list.csv"');
+    res.status(200).send(csv);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = 5000;
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
