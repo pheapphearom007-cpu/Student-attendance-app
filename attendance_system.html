@@ -35,7 +35,12 @@
       </div>
       <div class="form-group">
         <label>Password</label>
-        <input type="password" id="login-password" placeholder="Enter your password">
+        <div class="password-wrap">
+          <input type="password" id="login-password" placeholder="Enter your password">
+          <button type="button" class="password-toggle" data-target="login-password" aria-label="Show password" onclick="togglePasswordVisibility(this)">
+            <i class="ti ti-eye"></i>
+          </button>
+        </div>
       </div>
       <button class="btn btn-primary login-submit" onclick="doLogin()"><i class="ti ti-login"></i> Sign In</button>
       <button class="forgot-link" type="button" onclick="showRecovery()"><i class="ti ti-key"></i> Forgot password?</button>
@@ -48,11 +53,21 @@
       </div>
       <div class="form-group">
         <label>New Password</label>
-        <input type="password" id="recovery-password" placeholder="Create a new password">
+        <div class="password-wrap">
+          <input type="password" id="recovery-password" placeholder="Create a new password">
+          <button type="button" class="password-toggle" data-target="recovery-password" aria-label="Show password" onclick="togglePasswordVisibility(this)">
+            <i class="ti ti-eye"></i>
+          </button>
+        </div>
       </div>
       <div class="form-group">
         <label>Confirm Password</label>
-        <input type="password" id="recovery-confirm" placeholder="Confirm new password">
+        <div class="password-wrap">
+          <input type="password" id="recovery-confirm" placeholder="Confirm new password">
+          <button type="button" class="password-toggle" data-target="recovery-confirm" aria-label="Show password" onclick="togglePasswordVisibility(this)">
+            <i class="ti ti-eye"></i>
+          </button>
+        </div>
       </div>
       <button class="btn btn-primary login-submit" onclick="recoverPassword()"><i class="ti ti-device-floppy"></i> Reset Password</button>
       <button class="forgot-link" type="button" onclick="showLogin()"><i class="ti ti-arrow-left"></i> Back to sign in</button>
@@ -114,6 +129,18 @@ function clearAuthAlerts() {
   const alert = document.getElementById('recovery-alert');
   alert.className = 'hidden alert';
   alert.textContent = '';
+}
+
+function togglePasswordVisibility(button) {
+  const targetId = button.dataset.target;
+  const input = document.getElementById(targetId);
+  const icon = button.querySelector('i');
+  const isHidden = input.type === 'password';
+
+  input.type = isHidden ? 'text' : 'password';
+  icon.classList.toggle('ti-eye', !isHidden);
+  icon.classList.toggle('ti-eye-off', isHidden);
+  button.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
 }
 
 function setRecoveryAlert(message, type) {

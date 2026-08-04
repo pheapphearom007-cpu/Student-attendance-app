@@ -266,26 +266,67 @@ function markAll(status) {
   });
 }
 
-function saveAttendance(classId, date) {
+async function saveAttendance(classId, date) {
   const students = DB.get('students').filter(s=>s.class_id===classId);
-  let att = DB.get('attendance');
-  att = att.filter(a=>!(a.class_id===classId && a.date===date));
+  const entries = [];
   let saved = 0;
+
   students.forEach(s=>{
     const statusBtn = document.querySelector(`#att-row-${s.id} .status-btn[class*="selected-"]`);
     if (!statusBtn) return;
     const status = statusBtn.dataset.status;
     const remark = document.getElementById('remark-'+s.id)?.value||'';
-    const newId = att.length ? Math.max(...att.map(a=>a.id))+1 : 1;
-    att.push({id:newId+saved, student_id:s.id, class_id:classId, date, status, remark});
+    entries.push({ student_id:s.id, class_id:classId, date, status, remark });
     saved++;
   });
-  DB.set('attendance', att);
-  const alert = document.getElementById('att-alert');
-  alert.className='alert alert-success';
-  alert.textContent=`✓ Attendance saved for ${saved} students.`;
-  alert.classList.remove('hidden');
-  setTimeout(()=>alert.classList.add('hidden'),3000);
+
+  if (!saved) {
+    const alert = document.getElementById('att-alert');
+    alert.className='alert alert-danger';
+    alert.textContent='Please select a status for at least one student.';
+    alert.classList.remove('hidden');
+    setTimeout(()=>alert.classList.add('hidden'),3000);
+    return;
+  }
+
+  try {
+    const savedRows = [];
+    for (const entry of entries) {
+      const res = await fetch(`${window.location.origin}/api/attendance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry)
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || 'Failed to save attendance');
+      }
+      const savedRow = await res.json();
+      savedRows.push({
+        id: savedRow.id,
+        student_id: savedRow.student_id,
+        class_id: savedRow.class_id,
+        date: savedRow.date,
+        status: savedRow.status,
+        remark: savedRow.remark || ''
+      });
+    }
+
+    const current = DB.get('attendance').filter(a=>!(a.class_id===classId && a.date===date));
+    DB.set('attendance', [...current, ...savedRows]);
+
+    const alert = document.getElementById('att-alert');
+    alert.className='alert alert-success';
+    alert.textContent=`✓ Attendance saved for ${saved} students.`;
+    alert.classList.remove('hidden');
+    setTimeout(()=>alert.classList.add('hidden'),3000);
+  } catch (error) {
+    const alert = document.getElementById('att-alert');
+    alert.className='alert alert-danger';
+    alert.textContent='Attendance could not be saved to the server. Please try again.';
+    alert.classList.remove('hidden');
+    console.error(error);
+  }
 }
 
 // ---------- TEACHER HISTORY ----------

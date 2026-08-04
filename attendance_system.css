@@ -56,6 +56,15 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus { border-color: var(--primary-mid); }
 label { font-size: 13px; color: var(--gray-600); font-weight: 500; display: block; margin-bottom: 4px; }
 .form-group { margin-bottom: 14px; }
+.password-wrap { position: relative; }
+.password-wrap input { padding-right: 38px; }
+.password-toggle {
+  position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  border: none; background: transparent; color: var(--gray-600); cursor: pointer;
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  padding: 0; font-size: 16px; line-height: 1;
+}
+.password-toggle:hover { color: var(--primary); }
 table { width: 100%; border-collapse: collapse; font-size: 14px; }
 th { text-align: left; padding: 10px 12px; background: var(--gray-50); color: var(--gray-600); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--gray-100); }
 td { padding: 10px 12px; border-bottom: 1px solid var(--gray-50); vertical-align: middle; }

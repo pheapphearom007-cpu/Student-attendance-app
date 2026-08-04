@@ -1,4 +1,7 @@
 server/node_modules/
+server/attendance.db
+server/*.db
+workflows-demo/
 .DS_Store
 *.log
 node_modules/
