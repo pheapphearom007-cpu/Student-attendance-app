@@ -1,7 +1,28 @@
 const Database = require('better-sqlite3');
+const bcrypt = require('bcryptjs');
 const path = require('path');
 
 const db = new Database(path.join(__dirname, 'attendance.db'));
+
+function isHashedPassword(value) {
+  return typeof value === 'string' && /^\$2[aby]\$/.test(value);
+}
+
+function hashPassword(password) {
+  return bcrypt.hashSync(password, 10);
+}
+
+function migratePlainPasswords() {
+  ['admin', 'teachers', 'students'].forEach((table) => {
+    const rows = db.prepare(`SELECT * FROM ${table}`).all();
+    rows.forEach((row) => {
+      if (row.password && !isHashedPassword(row.password)) {
+        const hashed = hashPassword(row.password);
+        db.prepare(`UPDATE ${table} SET password = ? WHERE id = ?`).run(hashed, row.id);
+      }
+    });
+  });
+}
 
 // Enable foreign key constraints
 db.pragma('foreign_keys = ON');
@@ -56,15 +77,15 @@ db.exec(`
 const adminCount = db.prepare('SELECT COUNT(*) as count FROM admin').get().count;
 if (adminCount === 0) {
   db.prepare('INSERT INTO admin (name, email, password) VALUES (?, ?, ?)').run(
-    'Admin User', 'phirom007kh@gmail.com', 'nha061106'
+    'Admin User', 'phirom007kh@gmail.com', hashPassword('nha061106')
   );
 }
 
 const teacherCount = db.prepare('SELECT COUNT(*) as count FROM teachers').get().count;
 if (teacherCount === 0) {
   const insertTeacher = db.prepare('INSERT INTO teachers (id, name, email, password, subject) VALUES (?, ?, ?, ?, ?)');
-  insertTeacher.run(1, 'Sarah Johnson', 'teacher@school.com', 'teach123', 'Mathematics');
-  insertTeacher.run(2, 'Mike Chen', 'mike@school.com', 'teach456', 'Science');
+  insertTeacher.run(1, 'Sarah Johnson', 'teacher@school.com', hashPassword('teach123'), 'Mathematics');
+  insertTeacher.run(2, 'Mike Chen', 'mike@school.com', hashPassword('teach456'), 'Science');
 }
 
 const classCount = db.prepare('SELECT COUNT(*) as count FROM classes').get().count;
@@ -78,12 +99,12 @@ if (classCount === 0) {
 const studentCount = db.prepare('SELECT COUNT(*) as count FROM students').get().count;
 if (studentCount === 0) {
   const insertStudent = db.prepare('INSERT INTO students (id, name, email, password, class_id, phone) VALUES (?, ?, ?, ?, ?, ?)');
-  insertStudent.run(1, 'Alice Smith', 'student@school.com', 'stu123', 1, '012-345-6789');
-  insertStudent.run(2, 'Bob Lee', 'bob@school.com', 'stu456', 1, '012-345-6790');
-  insertStudent.run(3, 'Carol White', 'carol@school.com', 'stu789', 1, '012-345-6791');
-  insertStudent.run(4, 'David Brown', 'david@school.com', 'stu000', 2, '012-345-6792');
-  insertStudent.run(5, 'Eva Green', 'eva@school.com', 'stu001', 2, '012-345-6793');
-  insertStudent.run(6, 'Frank Kim', 'frank@school.com', 'stu002', 3, '012-345-6794');
+  insertStudent.run(1, 'Alice Smith', 'student@school.com', hashPassword('stu123'), 1, '012-345-6789');
+  insertStudent.run(2, 'Bob Lee', 'bob@school.com', hashPassword('stu456'), 1, '012-345-6790');
+  insertStudent.run(3, 'Carol White', 'carol@school.com', hashPassword('stu789'), 1, '012-345-6791');
+  insertStudent.run(4, 'David Brown', 'david@school.com', hashPassword('stu000'), 2, '012-345-6792');
+  insertStudent.run(5, 'Eva Green', 'eva@school.com', hashPassword('stu001'), 2, '012-345-6793');
+  insertStudent.run(6, 'Frank Kim', 'frank@school.com', hashPassword('stu002'), 3, '012-345-6794');
 }
 
 const attCount = db.prepare('SELECT COUNT(*) as count FROM attendance').get().count;
@@ -99,4 +120,8 @@ if (attCount === 0) {
   insertAtt.run(8, 5, 2, '2025-06-01', 'present', '');
 }
 
+migratePlainPasswords();
+
 module.exports = db;
+module.exports.hashPassword = hashPassword;
+module.exports.isHashedPassword = isHashedPassword;

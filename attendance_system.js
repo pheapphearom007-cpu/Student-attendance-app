@@ -85,6 +85,21 @@ function doLogin() {
   showApp();
 }
 
+function handleLoginKeydown(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    doLogin();
+  }
+}
+
+function initLoginKeyboardSupport() {
+  const emailInput = document.getElementById('login-email');
+  const passwordInput = document.getElementById('login-password');
+
+  if (emailInput) emailInput.addEventListener('keydown', handleLoginKeydown);
+  if (passwordInput) passwordInput.addEventListener('keydown', handleLoginKeydown);
+}
+
 function logout() {
   currentUser = null;
   document.getElementById('app-layout').classList.add('hidden');
@@ -530,3 +545,4 @@ function closeModal(e) {
 //  INIT
 // ============================================================
 initData();
+initLoginKeyboardSupport();

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 const db = require('./db');
 
 const fs = require('fs');
@@ -8,6 +9,16 @@ const fs = require('fs');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+function comparePassword(inputPassword, storedPassword) {
+  if (!storedPassword) return false;
+  if (storedPassword === inputPassword) return true;
+  if (typeof storedPassword === 'string' && /^\$2[aby]\$/.test(storedPassword)) {
+    return bcrypt.compareSync(inputPassword, storedPassword);
+  }
+  return false;
+}
 
 // Serve static frontend files from 'public' directory and root
 app.use(express.static(path.join(__dirname, 'public')));
@@ -49,19 +60,29 @@ app.post('/api/login', (req, res) => {
   const { email, password, role } = req.body;
   try {
     if (role === 'admin') {
-      const admin = db.prepare('SELECT * FROM admin WHERE email = ? AND password = ?').get(email, password);
-      if (admin) return res.json({ success: true, user: { ...admin, role: 'admin' } });
+      const admin = db.prepare('SELECT * FROM admin WHERE email = ?').get(email);
+      if (admin && comparePassword(password, admin.password)) {
+        return res.json({ success: true, user: { ...admin, role: 'admin' } });
+      }
     } else if (role === 'teacher') {
-      const teacher = db.prepare('SELECT * FROM teachers WHERE email = ? AND password = ?').get(email, password);
-      if (teacher) return res.json({ success: true, user: { ...teacher, role: 'teacher' } });
+      const teacher = db.prepare('SELECT * FROM teachers WHERE email = ?').get(email);
+      if (teacher && comparePassword(password, teacher.password)) {
+        return res.json({ success: true, user: { ...teacher, role: 'teacher' } });
+      }
     } else if (role === 'student') {
-      const student = db.prepare('SELECT * FROM students WHERE email = ? AND password = ?').get(email, password);
-      if (student) return res.json({ success: true, user: { ...student, role: 'student' } });
+      const student = db.prepare('SELECT * FROM students WHERE email = ?').get(email);
+      if (student && comparePassword(password, student.password)) {
+        return res.json({ success: true, user: { ...student, role: 'student' } });
+      }
     }
     res.status(401).json({ success: false, message: 'Invalid credentials or role' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, status: 'ok', database: 'sqlite', timestamp: new Date().toISOString() });
 });
 
 // -------------------------------------------------------------
