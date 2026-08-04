@@ -37,6 +37,22 @@
             width: 90%;
         }
 
+        .logo-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .logo-wrap img {
+            width: 120px;
+            height: 120px;
+            border-radius: 18px;
+            object-fit: cover;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+            background: rgba(255,255,255,0.15);
+            padding: 8px;
+        }
+
         /* Typography */
         h1 {
             font-size: 2.5rem;
@@ -80,6 +96,9 @@
 <body>
 
     <div class="welcome-container">
+        <div class="logo-wrap">
+            <img src="99.jpg" alt="AttendTrack logo">
+        </div>
         <h1>Welcome!</h1>
         <p>Log your hours in seconds, track daily presence in real time, and keep your entire workday effortlessly organized.</p>
         
