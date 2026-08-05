@@ -2,6 +2,8 @@
 //  ADMIN REPORTS PAGE
 // ============================================================
 
+var pages = window.pages = window.pages || {};
+
 pages.adminReports = function() {
   const att = DB.get('attendance');
   const students = DB.get('students');

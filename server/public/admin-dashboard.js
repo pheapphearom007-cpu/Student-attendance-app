@@ -2,6 +2,8 @@
 //  ADMIN DASHBOARD PAGE
 // ============================================================
 
+var pages = window.pages = window.pages || {};
+
 pages.adminDashboard = function() {
   const students = DB.get('students');
   const teachers = DB.get('teachers');

@@ -8,6 +8,10 @@ const API_URL = (function() {
   return 'https://student-attendance-app-lkjj.onrender.com/api';
 })();
 
+if (typeof window !== 'undefined') {
+  window.pages = window.pages || {};
+}
+
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
   return String(str)

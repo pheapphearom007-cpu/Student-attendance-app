@@ -2,6 +2,8 @@
 //  MANAGE STUDENTS PAGE
 // ============================================================
 
+var pages = window.pages = window.pages || {};
+
 pages.manageStudents = function(search='') {
   let students = DB.get('students');
   if (search) students = students.filter(s=>s.name.toLowerCase().includes(search.toLowerCase())||s.email.toLowerCase().includes(search));

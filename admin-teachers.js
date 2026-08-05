@@ -2,6 +2,8 @@
 //  MANAGE TEACHERS PAGE
 // ============================================================
 
+var pages = window.pages = window.pages || {};
+
 pages.manageTeachers = function() {
   const teachers = DB.get('teachers');
   const classes = DB.get('classes');
