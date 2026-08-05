@@ -88,29 +88,78 @@ function openTeacherModal(id=null) {
   showModal();
 }
 
-function saveTeacher(id) {
+async function saveTeacher(id) {
   const name = document.getElementById('m-name').value.trim();
   const email = document.getElementById('m-email').value.trim();
   const pwd = document.getElementById('m-pwd').value;
   const subject = document.getElementById('m-subj').value.trim();
-  if (!name||!email) { alert('Name and email required.'); return; }
-  const teachers = DB.get('teachers');
-  if (id) {
-    const idx = teachers.findIndex(t=>t.id===id);
-    if (idx>=0) teachers[idx] = {...teachers[idx], name, email, subject, password:pwd||teachers[idx].password};
-  } else {
-    const newId = teachers.length ? Math.max(...teachers.map(t=>t.id))+1 : 1;
-    teachers.push({id:newId, name, email, password:pwd||'teacher123', subject});
+
+  if (!name || !email) { alert('Name and email required.'); return; }
+
+  try {
+    const token = getToken();
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    let res;
+    if (id) {
+      res = await fetch(`${API_URL}/teachers/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ name, email, password: pwd, subject })
+      });
+    } else {
+      res = await fetch(`${API_URL}/teachers`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name, email, password: pwd || 'teacher123', subject })
+      });
+    }
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Failed to save teacher: ' + (err.error || err.message || 'Unknown error'));
+      return;
+    }
+
+    const saved = await res.json();
+    const teachers = DB.get('teachers');
+    if (id) {
+      const idx = teachers.findIndex(t => t.id === id);
+      if (idx >= 0) teachers[idx] = { ...teachers[idx], ...saved };
+    } else {
+      teachers.push(saved);
+    }
+    DB.set('teachers', teachers);
+    closeModal();
+    renderTeachers();
+  } catch (error) {
+    console.error('Error saving teacher:', error);
+    alert('Failed to connect to backend server.');
   }
-  DB.set('teachers', teachers);
-  closeModal();
-  renderTeachers();
 }
 
-function deleteTeacher(id) {
+async function deleteTeacher(id) {
   if (!confirm('Delete this teacher?')) return;
-  DB.set('teachers', DB.get('teachers').filter(t=>t.id!==id));
-  renderTeachers();
+  try {
+    const token = getToken();
+    const res = await fetch(`${API_URL}/teachers/${id}`, {
+      method: 'DELETE',
+      headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+    });
+    if (res.ok) {
+      DB.set('teachers', DB.get('teachers').filter(t => t.id !== id));
+      renderTeachers();
+    } else {
+      alert('Failed to delete teacher from server.');
+    }
+  } catch (error) {
+    console.error('Error deleting teacher:', error);
+    DB.set('teachers', DB.get('teachers').filter(t => t.id !== id));
+    renderTeachers();
+  }
 }
 
 renderTeachers();

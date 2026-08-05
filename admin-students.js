@@ -68,28 +68,79 @@ function openStudentModal(id=null) {
   showModal();
 }
 
-function saveStudent(id) {
+async function saveStudent(id) {
   const name = document.getElementById('m-name').value.trim();
   const email = document.getElementById('m-email').value.trim();
   const pwd = document.getElementById('m-pwd').value;
   const phone = document.getElementById('m-phone').value.trim();
-  const class_id = parseInt(document.getElementById('m-class').value)||0;
-  if (!name||!email) { alert('Name and email are required.'); return; }
-  const students = DB.get('students');
-  if (id) {
-    const idx = students.findIndex(s=>s.id===id);
-    if (idx>=0) students[idx] = {...students[idx], name, email, phone, class_id, password:pwd||students[idx].password};
-  } else {
-    const newId = students.length ? Math.max(...students.map(s=>s.id))+1 : 1;
-    students.push({id:newId, name, email, password:pwd||'student123', phone, class_id});
+  const class_id = parseInt(document.getElementById('m-class').value)||null;
+
+  if (!name || !email) { alert('Name and email are required.'); return; }
+
+  try {
+    const token = getToken();
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+    
+    let res;
+    if (id) {
+      res = await fetch(`${API_URL}/students/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ name, email, password: pwd, class_id, phone })
+      });
+    } else {
+      res = await fetch(`${API_URL}/students`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name, email, password: pwd || 'student123', class_id, phone })
+      });
+    }
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Failed to save student: ' + (err.error || err.message || 'Unknown error'));
+      return;
+    }
+
+    const saved = await res.json();
+    const students = DB.get('students');
+    if (id) {
+      const idx = students.findIndex(s => s.id === id);
+      if (idx >= 0) students[idx] = { ...students[idx], ...saved };
+    } else {
+      students.push(saved);
+    }
+    DB.set('students', students);
+    closeModal();
+    if (typeof renderStudents === 'function') renderStudents();
+    if (typeof pages !== 'undefined' && pages.manageStudents) pages.manageStudents();
+  } catch (error) {
+    console.error('Error saving student:', error);
+    alert('Failed to connect to backend server.');
   }
-  DB.set('students', students);
-  closeModal();
-  pages.manageStudents();
 }
 
-function deleteStudent(id) {
+async function deleteStudent(id) {
   if (!confirm('Delete this student? All attendance records will be kept.')) return;
-  DB.set('students', DB.get('students').filter(s=>s.id!==id));
-  pages.manageStudents();
+  try {
+    const token = getToken();
+    const res = await fetch(`${API_URL}/students/${id}`, {
+      method: 'DELETE',
+      headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+    });
+    if (res.ok) {
+      DB.set('students', DB.get('students').filter(s => s.id !== id));
+      if (typeof renderStudents === 'function') renderStudents();
+      if (typeof pages !== 'undefined' && pages.manageStudents) pages.manageStudents();
+    } else {
+      alert('Failed to delete student from backend server.');
+    }
+  } catch (error) {
+    console.error('Error deleting student:', error);
+    DB.set('students', DB.get('students').filter(s => s.id !== id));
+    if (typeof renderStudents === 'function') renderStudents();
+  }
 }

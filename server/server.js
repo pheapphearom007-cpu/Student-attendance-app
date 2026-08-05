@@ -2,9 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const db = require('./db');
 
 const fs = require('fs');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'attendtrack_jwt_secret_key_2026_super_secure';
 
 const app = express();
 app.use(cors());
@@ -12,12 +15,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 function comparePassword(inputPassword, storedPassword) {
-  if (!storedPassword) return false;
+  if (!storedPassword || !inputPassword) return false;
   if (storedPassword === inputPassword) return true;
   if (typeof storedPassword === 'string' && /^\$2[aby]\$/.test(storedPassword)) {
     return bcrypt.compareSync(inputPassword, storedPassword);
   }
   return false;
+}
+
+function ensureHashed(pwd) {
+  if (!pwd) return db.hashPassword('123456');
+  if (db.isHashedPassword(pwd)) return pwd;
+  return db.hashPassword(pwd);
 }
 
 // Serve static frontend files from 'public' directory and root
@@ -54,30 +63,74 @@ app.get('/api/db/all', (req, res) => {
 });
 
 // -------------------------------------------------------------
-//  AUTHENTICATION
+//  AUTHENTICATION & JWT API
 // -------------------------------------------------------------
 app.post('/api/login', (req, res) => {
   const { email, password, role } = req.body;
+  const cleanEmail = (email || '').trim().toLowerCase();
+
   try {
-    if (role === 'admin') {
-      const admin = db.prepare('SELECT * FROM admin WHERE email = ?').get(email);
-      if (admin && comparePassword(password, admin.password)) {
-        return res.json({ success: true, user: { ...admin, role: 'admin' } });
-      }
-    } else if (role === 'teacher') {
-      const teacher = db.prepare('SELECT * FROM teachers WHERE email = ?').get(email);
-      if (teacher && comparePassword(password, teacher.password)) {
-        return res.json({ success: true, user: { ...teacher, role: 'teacher' } });
-      }
-    } else if (role === 'student') {
-      const student = db.prepare('SELECT * FROM students WHERE email = ?').get(email);
-      if (student && comparePassword(password, student.password)) {
-        return res.json({ success: true, user: { ...student, role: 'student' } });
-      }
+    let user = null;
+    let foundRole = role || 'admin';
+
+    if (foundRole === 'admin') {
+      user = db.prepare('SELECT * FROM admin WHERE LOWER(email) = ?').get(cleanEmail);
+    } else if (foundRole === 'teacher') {
+      user = db.prepare('SELECT * FROM teachers WHERE LOWER(email) = ?').get(cleanEmail);
+    } else if (foundRole === 'student') {
+      user = db.prepare('SELECT * FROM students WHERE LOWER(email) = ?').get(cleanEmail);
     }
-    res.status(401).json({ success: false, message: 'Invalid credentials or role' });
+
+    if (user && comparePassword(password, user.password)) {
+      const sanitizedUser = { ...user, role: foundRole };
+      delete sanitizedUser.password;
+
+      // Generate JWT Token
+      const token = jwt.sign(
+        { id: user.id, email: user.email, name: user.name, role: foundRole },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      return res.json({
+        success: true,
+        token,
+        user: sanitizedUser
+      });
+    }
+
+    return res.status(401).json({ success: false, message: 'Invalid credentials or role mismatch.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const authHeader = req.headers.authorization || req.headers.token;
+  if (!authHeader) {
+    return res.status(401).json({ success: false, message: 'No authorization token provided.' });
+  }
+
+  const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    let user = null;
+    if (decoded.role === 'admin') {
+      user = db.prepare('SELECT id, name, email FROM admin WHERE id = ?').get(decoded.id);
+    } else if (decoded.role === 'teacher') {
+      user = db.prepare('SELECT id, name, email, subject FROM teachers WHERE id = ?').get(decoded.id);
+    } else if (decoded.role === 'student') {
+      user = db.prepare('SELECT id, name, email, class_id, phone FROM students WHERE id = ?').get(decoded.id);
+    }
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User account no longer exists.' });
+    }
+
+    return res.json({ success: true, user: { ...user, role: decoded.role } });
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Token invalid or expired.' });
   }
 });
 
@@ -142,11 +195,13 @@ app.get('/api/teachers', (req, res) => {
 
 app.post('/api/teachers', (req, res) => {
   const { name, email, password, subject } = req.body;
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const hashedPassword = ensureHashed(password);
   try {
     const info = db.prepare(
       'INSERT INTO teachers (name, email, password, subject) VALUES (?, ?, ?, ?)'
-    ).run(name, email, password, subject || '');
-    res.json({ id: info.lastInsertRowid, name, email, password, subject });
+    ).run(name, cleanEmail, hashedPassword, subject || '');
+    res.json({ id: info.lastInsertRowid, name, email: cleanEmail, subject });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -155,11 +210,14 @@ app.post('/api/teachers', (req, res) => {
 app.put('/api/teachers/:id', (req, res) => {
   const { id } = req.params;
   const { name, email, password, subject } = req.body;
+  const cleanEmail = (email || '').trim().toLowerCase();
   try {
+    const existing = db.prepare('SELECT password FROM teachers WHERE id = ?').get(id);
+    const hashedPassword = password ? ensureHashed(password) : (existing ? existing.password : ensureHashed('123456'));
     db.prepare(
       'UPDATE teachers SET name = ?, email = ?, password = ?, subject = ? WHERE id = ?'
-    ).run(name, email, password, subject || '', id);
-    res.json({ id: Number(id), name, email, password, subject });
+    ).run(name, cleanEmail, hashedPassword, subject || '', id);
+    res.json({ id: Number(id), name, email: cleanEmail, subject });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -189,11 +247,13 @@ app.get('/api/students', (req, res) => {
 
 app.post('/api/students', (req, res) => {
   const { name, email, password, class_id, phone } = req.body;
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const hashedPassword = ensureHashed(password);
   try {
     const info = db.prepare(
       'INSERT INTO students (name, email, password, class_id, phone) VALUES (?, ?, ?, ?, ?)'
-    ).run(name, email, password, class_id || null, phone || '');
-    res.json({ id: info.lastInsertRowid, name, email, password, class_id, phone });
+    ).run(name, cleanEmail, hashedPassword, class_id || null, phone || '');
+    res.json({ id: info.lastInsertRowid, name, email: cleanEmail, class_id, phone });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -202,11 +262,14 @@ app.post('/api/students', (req, res) => {
 app.put('/api/students/:id', (req, res) => {
   const { id } = req.params;
   const { name, email, password, class_id, phone } = req.body;
+  const cleanEmail = (email || '').trim().toLowerCase();
   try {
+    const existing = db.prepare('SELECT password FROM students WHERE id = ?').get(id);
+    const hashedPassword = password ? ensureHashed(password) : (existing ? existing.password : ensureHashed('123456'));
     db.prepare(
       'UPDATE students SET name = ?, email = ?, password = ?, class_id = ?, phone = ? WHERE id = ?'
-    ).run(name, email, password, class_id || null, phone || '', id);
-    res.json({ id: Number(id), name, email, password, class_id, phone });
+    ).run(name, cleanEmail, hashedPassword, class_id || null, phone || '', id);
+    res.json({ id: Number(id), name, email: cleanEmail, class_id, phone });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -270,11 +333,19 @@ app.post('/api/sync/:key', (req, res) => {
       } else if (key === 'teachers') {
         db.prepare('DELETE FROM teachers').run();
         const insert = db.prepare('INSERT INTO teachers (id, name, email, password, subject) VALUES (?, ?, ?, ?, ?)');
-        for (const item of items) insert.run(item.id, item.name, item.email, item.password, item.subject || '');
+        for (const item of items) {
+          const pass = ensureHashed(item.password);
+          const em = (item.email || '').trim().toLowerCase();
+          insert.run(item.id, item.name, em, pass, item.subject || '');
+        }
       } else if (key === 'students') {
         db.prepare('DELETE FROM students').run();
         const insert = db.prepare('INSERT INTO students (id, name, email, password, class_id, phone) VALUES (?, ?, ?, ?, ?, ?)');
-        for (const item of items) insert.run(item.id, item.name, item.email, item.password, item.class_id || null, item.phone || '');
+        for (const item of items) {
+          const pass = ensureHashed(item.password);
+          const em = (item.email || '').trim().toLowerCase();
+          insert.run(item.id, item.name, em, pass, item.class_id || null, item.phone || '');
+        }
       } else if (key === 'attendance') {
         db.prepare('DELETE FROM attendance').run();
         const insert = db.prepare('INSERT INTO attendance (id, student_id, class_id, date, status, remark) VALUES (?, ?, ?, ?, ?, ?)');

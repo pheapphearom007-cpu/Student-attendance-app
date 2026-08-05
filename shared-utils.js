@@ -5,14 +5,36 @@ const API_URL = window.location.protocol.startsWith('http')
   ? window.location.origin + '/api' 
   : 'http://localhost:5000/api';
 
+function setToken(token) {
+  if (!token) return;
+  localStorage.setItem('atk_token', token);
+  document.cookie = `atk_token=${encodeURIComponent(token)}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`;
+}
+
+function getToken() {
+  const localToken = localStorage.getItem('atk_token');
+  if (localToken) return localToken;
+  const match = document.cookie.match(/(?:^|; )atk_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function removeToken() {
+  localStorage.removeItem('atk_token');
+  document.cookie = 'atk_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+}
+
 const DB = {
   get(key) { try { return JSON.parse(localStorage.getItem('atk_'+key)) || []; } catch{ return []; } },
   set(key, val) { 
     localStorage.setItem('atk_'+key, JSON.stringify(val));
     // Asynchronously push to backend SQLite DB server
+    const token = getToken();
     fetch(`${API_URL}/sync/${key}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
       body: JSON.stringify(val)
     }).catch(err => console.warn('Backend sync warning:', err.message));
   },
@@ -70,15 +92,11 @@ function initData() {
       {id:7, student_id:4, class_id:2, date:'2025-06-01', status:'present', remark:''},
       {id:8, student_id:5, class_id:2, date:'2025-06-01', status:'present', remark:''},
     ]);
-    DB.setObj('admin', {name:'Admin User', email:'phirom007kh@gmail.com', password:'nha061106'});
+    DB.setObj('admin', {name:'Admin User', email:'phirom007kh@gmail.com'});
     localStorage.setItem('atk_initialized','1');
   }
-
-  const currentAdmin = DB.getObj('admin', {});
-  if (currentAdmin.email !== 'phirom007kh@gmail.com') {
-    DB.setObj('admin', {name:'Admin User', email:'phirom007kh@gmail.com', password:'nha061106'});
-  }
 }
+
 function getCurrentUser() {
   currentUser = JSON.parse(localStorage.getItem('atk_currentUser')) || null;
   return currentUser;
@@ -90,16 +108,45 @@ function setCurrentUser(user) {
 }
 
 function logout() {
+  removeToken();
   localStorage.removeItem('atk_currentUser');
   window.location.href = 'attendance_system.html';
 }
 
+async function verifyBackendToken() {
+  const token = getToken();
+  if (!token) return false;
+  try {
+    const res = await fetch(`${API_URL}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.user) {
+        setCurrentUser(data.user);
+        initLayout();
+        return true;
+      }
+    }
+  } catch (e) {
+    console.warn('Backend token verification skipped offline');
+  }
+  return true;
+}
+
 function checkAuth() {
   const user = getCurrentUser();
-  if (!user) {
-    window.location.href = 'attendance_system.html';
+  const token = getToken();
+
+  if (!user && !token) {
+    if (!window.location.pathname.endsWith('attendance_system.html') && !window.location.pathname.endsWith('index.html')) {
+      window.location.href = 'attendance_system.html';
+    }
     return false;
   }
+
+  // Asynchronously verify token with server
+  verifyBackendToken();
   return true;
 }
 
@@ -116,9 +163,14 @@ function initLayout() {
     if (user.role==='student') avatar.classList.add('amber');
   }
   
-  document.getElementById('user-name-display').textContent = user.name;
-  document.getElementById('user-email-display').textContent = user.email;
-  document.getElementById('role-badge').textContent = user.role.charAt(0).toUpperCase()+user.role.slice(1);
+  const nameEl = document.getElementById('user-name-display');
+  if (nameEl) nameEl.textContent = user.name;
+
+  const emailEl = document.getElementById('user-email-display');
+  if (emailEl) emailEl.textContent = user.email;
+
+  const badgeEl = document.getElementById('role-badge');
+  if (badgeEl && user.role) badgeEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
 
   // Setup navigation
   const navs = {
@@ -143,7 +195,7 @@ function initLayout() {
   };
 
   const nav = document.getElementById('sidebar-nav');
-  if (nav) {
+  if (nav && user.role) {
     nav.innerHTML = '';
     const items = navs[user.role] || [];
     const currentPage = window.location.pathname.split('/').pop();

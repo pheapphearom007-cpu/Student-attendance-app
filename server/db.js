@@ -125,3 +125,4 @@ migratePlainPasswords();
 module.exports = db;
 module.exports.hashPassword = hashPassword;
 module.exports.isHashedPassword = isHashedPassword;
+
