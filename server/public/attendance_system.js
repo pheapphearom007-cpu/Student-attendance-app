@@ -327,40 +327,32 @@ async function saveAttendance(classId, date) {
   }
 
   try {
-    const savedRows = [];
-    for (const entry of entries) {
-      const res = await fetch(`${window.location.origin}/api/attendance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry)
-      });
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || 'Failed to save attendance');
-      }
-      const savedRow = await res.json();
-      savedRows.push({
-        id: savedRow.id,
-        student_id: savedRow.student_id,
-        class_id: savedRow.class_id,
-        date: savedRow.date,
-        status: savedRow.status,
-        remark: savedRow.remark || ''
-      });
+    const token = getToken();
+    const res = await fetch(`${API_URL}/attendance/bulk`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ records: entries })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.message || 'Failed to save attendance');
     }
 
-    const current = DB.get('attendance').filter(a=>!(a.class_id===classId && a.date===date));
-    DB.set('attendance', [...current, ...savedRows]);
+    try { await syncWithBackend(true); } catch(e) {}
 
     const alert = document.getElementById('att-alert');
     alert.className='alert alert-success';
-    alert.textContent=`✓ Attendance saved for ${saved} students.`;
+    alert.textContent=`✓ Attendance saved and submitted to Admin for ${saved} students.`;
     alert.classList.remove('hidden');
-    setTimeout(()=>alert.classList.add('hidden'),3000);
+    setTimeout(()=>alert.classList.add('hidden'), 4000);
   } catch (error) {
     const alert = document.getElementById('att-alert');
     alert.className='alert alert-danger';
-    alert.textContent='Attendance could not be saved to the server. Please try again.';
+    alert.textContent='Attendance could not be saved to the server. ' + error.message;
     alert.classList.remove('hidden');
     console.error(error);
   }
