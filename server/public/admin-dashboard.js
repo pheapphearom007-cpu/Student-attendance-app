@@ -9,7 +9,7 @@ pages.adminDashboard = function() {
   const teachers = DB.get('teachers');
   const classes = DB.get('classes');
   const att = DB.get('attendance');
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   const todayAtt = att.filter(a=>a.date===today);
   const presentToday = todayAtt.filter(a=>a.status==='present').length;
 

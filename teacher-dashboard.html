@@ -64,7 +64,7 @@ function renderDashboard() {
   const classes = DB.get('classes').filter(c=>c.teacher_id===user.id);
   const students = DB.get('students');
   const att = DB.get('attendance');
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
 
   // Stats
   document.getElementById('stat-cards').innerHTML = `

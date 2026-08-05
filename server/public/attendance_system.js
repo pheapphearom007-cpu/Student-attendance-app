@@ -205,7 +205,7 @@ pages.teacherDashboard = function() {
   const classes = DB.get('classes').filter(c=>c.teacher_id===currentUser.id);
   const students = DB.get('students');
   const att = DB.get('attendance');
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   mc().innerHTML = `
     <div class="page-header"><h1>Teacher Dashboard</h1><p>Welcome, ${currentUser.name}!</p></div>
     <div class="stat-cards">
@@ -236,7 +236,7 @@ pages.teacherDashboard = function() {
 // ---------- TAKE ATTENDANCE ----------
 pages.takeAttendance = function() {
   const classes = DB.get('classes').filter(c=>c.teacher_id===currentUser.id);
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   mc().innerHTML = `
     <div class="page-header"><h1>Take Attendance</h1><p>Mark attendance for your class.</p></div>
     <div class="card" style="margin-bottom:16px">

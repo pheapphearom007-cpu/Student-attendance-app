@@ -60,7 +60,7 @@
 if (!checkAuth()) throw new Error('Unauthorized');
 
 const user = getCurrentUser();
-const today = new Date().toISOString().split('T')[0];
+const today = getLocalDateString();
 document.getElementById('att-date').value = today;
 document.getElementById('att-date').onchange = loadAttStudents;
 
