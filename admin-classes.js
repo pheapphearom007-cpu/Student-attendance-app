@@ -45,25 +45,64 @@ function openClassModal(id=null) {
   showModal();
 }
 
-function saveClass(id) {
+async function saveClass(id) {
   const name = document.getElementById('m-cname').value.trim();
   const teacher_id = parseInt(document.getElementById('m-tid').value)||null;
   if (!name) { alert('Class name is required.'); return; }
-  const classes = DB.get('classes');
-  if (id) {
-    const idx = classes.findIndex(c=>c.id===id);
-    if (idx>=0) classes[idx] = {...classes[idx], name, teacher_id};
-  } else {
-    const newId = classes.length ? Math.max(...classes.map(c=>c.id))+1 : 1;
-    classes.push({id:newId, name, teacher_id});
+
+  try {
+    const token = getToken();
+    const headers = { 
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    let res;
+    if (id) {
+      res = await fetch(`${API_URL}/classes/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ name, teacher_id })
+      });
+    } else {
+      res = await fetch(`${API_URL}/classes`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name, teacher_id })
+      });
+    }
+
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Failed to save class: ' + (err.error || err.message || 'Unknown error'));
+      return;
+    }
+
+    closeModal();
+    await syncWithBackend(true);
+    if (typeof pages !== 'undefined' && pages.manageClasses) pages.manageClasses();
+  } catch (error) {
+    console.error('Error saving class:', error);
+    alert('Failed to connect to backend server.');
   }
-  DB.set('classes', classes);
-  closeModal();
-  pages.manageClasses();
 }
 
-function deleteClass(id) {
+async function deleteClass(id) {
   if (!confirm('Delete this class?')) return;
-  DB.set('classes', DB.get('classes').filter(c=>c.id!==id));
-  pages.manageClasses();
+  try {
+    const token = getToken();
+    const res = await fetch(`${API_URL}/classes/${id}`, {
+      method: 'DELETE',
+      headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+    });
+    if (res.ok) {
+      await syncWithBackend(true);
+      if (typeof pages !== 'undefined' && pages.manageClasses) pages.manageClasses();
+    } else {
+      alert('Failed to delete class from server.');
+    }
+  } catch (error) {
+    console.error('Error deleting class:', error);
+    alert('Failed to connect to backend server.');
+  }
 }

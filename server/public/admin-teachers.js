@@ -95,16 +95,8 @@ async function saveTeacher(id) {
       return;
     }
 
-    const saved = await res.json();
-    const teachers = DB.get('teachers');
-    if (id) {
-      const idx = teachers.findIndex(t => t.id === id);
-      if (idx >= 0) teachers[idx] = { ...teachers[idx], ...saved };
-    } else {
-      teachers.push(saved);
-    }
-    DB.set('teachers', teachers);
     closeModal();
+    await syncWithBackend(true);
     if (typeof renderTeachers === 'function') renderTeachers();
     if (typeof pages !== 'undefined' && pages.manageTeachers) pages.manageTeachers();
   } catch (error) {
@@ -122,7 +114,7 @@ async function deleteTeacher(id) {
       headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
     });
     if (res.ok) {
-      DB.set('teachers', DB.get('teachers').filter(t => t.id !== id));
+      await syncWithBackend(true);
       if (typeof renderTeachers === 'function') renderTeachers();
       if (typeof pages !== 'undefined' && pages.manageTeachers) pages.manageTeachers();
     } else {
@@ -130,7 +122,6 @@ async function deleteTeacher(id) {
     }
   } catch (error) {
     console.error('Error deleting teacher:', error);
-    DB.set('teachers', DB.get('teachers').filter(t => t.id !== id));
-    if (typeof renderTeachers === 'function') renderTeachers();
+    alert('Failed to connect to backend server.');
   }
 }
