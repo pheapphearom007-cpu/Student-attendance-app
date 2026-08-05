@@ -165,19 +165,8 @@ if (!isSeeded) {
     insertStudent.run(6, 'Frank Kim', 'frank@school.com', hashPassword('stu002'), 3, '012-345-6794');
   }
 
-  // Seed default Attendance if empty
-  const attCount = db.prepare('SELECT COUNT(*) as count FROM attendance').get().count;
-  if (attCount === 0) {
-    const insertAtt = db.prepare('INSERT INTO attendance (id, student_id, class_id, date, status, remark) VALUES (?, ?, ?, ?, ?, ?)');
-    insertAtt.run(1, 1, 1, '2025-06-01', 'present', '');
-    insertAtt.run(2, 2, 1, '2025-06-01', 'absent', 'Sick');
-    insertAtt.run(3, 3, 1, '2025-06-01', 'present', '');
-    insertAtt.run(4, 1, 1, '2025-06-02', 'late', 'Traffic');
-    insertAtt.run(5, 2, 1, '2025-06-02', 'present', '');
-    insertAtt.run(6, 3, 1, '2025-06-02', 'excused', 'Doctor');
-    insertAtt.run(7, 4, 2, '2025-06-01', 'present', '');
-    insertAtt.run(8, 5, 2, '2025-06-01', 'present', '');
-  }
+  // Clear legacy sample attendance records so attendance starts at 0 until teachers submit real data
+  db.prepare('DELETE FROM attendance').run();
 
   // Seed Academic Years if empty
   const ayCount = db.prepare('SELECT COUNT(*) as count FROM academic_years').get().count;

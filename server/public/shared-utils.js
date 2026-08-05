@@ -261,7 +261,7 @@ function initLayout() {
 function recentAttTable(att) {
   const students = DB.get('students');
   const classes = DB.get('classes');
-  if (!att.length) return `<div class="empty-state"><i class="ti ti-calendar-off"></i><p>No attendance records yet.</p></div>`;
+  if (!att.length) return `<div class="empty-state"><i class="ti ti-calendar-off"></i><p>No attendance records recorded yet. Waiting for teacher submissions.</p></div>`;
   return `<table><thead><tr><th>Student</th><th>Class</th><th>Date</th><th>Status</th><th>Remark</th></tr></thead><tbody>
     ${att.map(a=>{
       const s = students.find(x=>x.id===a.student_id)||{name:'Unknown'};
