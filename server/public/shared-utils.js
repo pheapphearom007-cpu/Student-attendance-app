@@ -1,9 +1,12 @@
 // ============================================================
 //  SHARED DATA STORE & UTILITIES (CONNECTED TO BACKEND REST API)
 // ============================================================
-const API_URL = window.location.protocol.startsWith('http') 
-  ? window.location.origin + '/api' 
-  : 'http://localhost:5000/api';
+const API_URL = (function() {
+  if (typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http')) {
+    return window.location.origin + '/api';
+  }
+  return 'https://student-attendance-app-lkjj.onrender.com/api';
+})();
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return '';
@@ -97,7 +100,7 @@ async function syncWithBackend(triggerRender = false) {
       }
     }
   } catch (err) {
-    console.warn('Backend API server not reachable, using local storage cache.');
+    // Offline or server unreachable fallback
   }
 }
 
@@ -166,7 +169,7 @@ async function verifyBackendToken() {
       }
     }
   } catch (e) {
-    console.warn('Backend token verification skipped offline');
+    // Token verification catch fallback
   }
   return true;
 }
