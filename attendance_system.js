@@ -16,8 +16,8 @@ function initData() {
       {id:3, name:'Grade 11-A', teacher_id:1},
     ]);
     DB.set('teachers', [
-      {id:1, name:'Sarah Johnson', email:'teacher@school.com', password:'teach123', subject:'Mathematics'},
-      {id:2, name:'Mike Chen', email:'mike@school.com', password:'teach456', subject:'Science'},
+      {id:1, name:'Pheap Phirom, email:'pheapphearom007@gmail.com', password:'popltvh7586', subject:'Mathematic'},
+      {id:2, name:'Ly Sokun', email:'lysokun1225@school.com', password:'sokun11112222', subject:'Science'},
     ]);
     DB.set('students', [
       {id:1, name:'Alice Smith', email:'student@school.com', password:'stu123', class_id:1, phone:'012-345-6789'},
