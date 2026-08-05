@@ -2,8 +2,12 @@
 //  SHARED DATA STORE & UTILITIES (CONNECTED TO BACKEND REST API)
 // ============================================================
 const API_URL = (function() {
-  if (typeof window !== 'undefined' && window.location && window.location.protocol.startsWith('http')) {
-    return window.location.origin + '/api';
+  if (typeof window !== 'undefined' && window.location) {
+    const host = window.location.hostname;
+    const port = window.location.port;
+    if (host.includes('onrender.com') || port === '5000') {
+      return window.location.origin + '/api';
+    }
   }
   return 'https://student-attendance-app-lkjj.onrender.com/api';
 })();
