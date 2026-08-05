@@ -16,8 +16,8 @@ function initData() {
       {id:3, name:'Grade 11-A', teacher_id:1},
     ]);
     DB.set('teachers', [
-      {id:1, name:'Sarah Johnson', email:'teacher@school.com', password:'teach123', subject:'Mathematics'},
-      {id:2, name:'Mike Chen', email:'mike@school.com', password:'teach456', subject:'Science'},
+      {id:1, name:'Pheap Phirom', email:'pheapphearom007@gmail.com', password:'popltvh7586', subject:'Mathematic'},
+      {id:2, name:'Ly Sokun', email:'lysokun1225@school.com', password:'sokun11112222', subject:'Science'},
     ]);
     DB.set('students', [
       {id:1, name:'Alice Smith', email:'student@school.com', password:'stu123', class_id:1, phone:'012-345-6789'},
@@ -62,27 +62,49 @@ function switchRole(role) {
   document.getElementById('login-password').value = pwds[role];
 }
 
-function doLogin() {
+async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pw = document.getElementById('login-password').value;
   const role = selectedRole;
-  let user = null;
+  const alertEl = document.getElementById('login-alert');
 
-  if (role === 'admin') {
-    const a = DB.getObj('admin');
-    if (a.email === email && a.password === pw) user = {...a, role:'admin'};
-  } else if (role === 'teacher') {
-    const t = DB.get('teachers').find(t => t.email===email && t.password===pw);
-    if (t) user = {...t, role:'teacher'};
-  } else {
-    const s = DB.get('students').find(s => s.email===email && s.password===pw);
-    if (s) user = {...s, role:'student'};
+  if (!email || !pw) {
+    if (alertEl) {
+      alertEl.textContent = 'Please enter email and password.';
+      alertEl.classList.remove('hidden');
+    }
+    return;
   }
 
-  if (!user) { document.getElementById('login-alert').classList.remove('hidden'); return; }
-  document.getElementById('login-alert').classList.add('hidden');
-  currentUser = user;
-  showApp();
+  try {
+    const res = await fetch(`${API_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pw, role })
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      if (alertEl) alertEl.classList.add('hidden');
+      setToken(data.token);
+      setCurrentUser(data.user);
+      currentUser = data.user;
+      showApp();
+      return;
+    } else {
+      if (alertEl) {
+        alertEl.textContent = data.message || 'Invalid credentials or role mismatch.';
+        alertEl.classList.remove('hidden');
+      }
+    }
+  } catch (err) {
+    console.warn('Backend API login error:', err);
+    if (alertEl) {
+      alertEl.textContent = 'Server connection error. Ensure the backend server is running.';
+      alertEl.classList.remove('hidden');
+    }
+  }
 }
 
 function handleLoginKeydown(event) {

@@ -29,7 +29,7 @@
       <button class="login-tab" onclick="switchRole('teacher')">Teacher</button>
       <button class="login-tab" onclick="switchRole('student')">Student</button>
     </div>
-    <div id="login-form">
+    <form id="login-form" onsubmit="event.preventDefault(); doLogin();">
       <div class="form-group">
       <label>Email</label>
       <input type="email" id="login-email" placeholder="Enter your email">
@@ -43,11 +43,11 @@
           </button>
         </div>
       </div>
-      <button class="btn btn-primary login-submit" onclick="doLogin()"><i class="ti ti-login"></i> Sign In</button>
+      <button type="submit" class="btn btn-primary login-submit"><i class="ti ti-login"></i> Sign In</button>
       <button class="forgot-link" type="button" onclick="showRecovery()"><i class="ti ti-key"></i> Forgot password?</button>
-    </div>
+    </form>
 
-    <div id="recovery-form" class="hidden">
+    <form id="recovery-form" class="hidden" onsubmit="event.preventDefault(); recoverPassword();">
       <div class="form-group">
         <label>Registered Email</label>
         <input type="email" id="recovery-email" placeholder="Enter your account email">
@@ -70,9 +70,9 @@
           </button>
         </div>
       </div>
-      <button class="btn btn-primary login-submit" onclick="recoverPassword()"><i class="ti ti-device-floppy"></i> Reset Password</button>
+      <button type="submit" class="btn btn-primary login-submit"><i class="ti ti-device-floppy"></i> Reset Password</button>
       <button class="forgot-link" type="button" onclick="showLogin()"><i class="ti ti-arrow-left"></i> Back to sign in</button>
-    </div>
+    </form>
   </div>
 </div>
 
@@ -118,8 +118,11 @@ function switchRole(role) {
   document.querySelectorAll('.login-tab').forEach((t,i)=>t.classList.toggle('active',['admin','teacher','student'][i]===role));
   clearAuthAlerts();
   
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-password').value = '';
+  const demoEmails = { admin: 'phirom007kh@gmail.com', teacher: 'teacher@school.com', student: 'student@school.com' };
+  const demoPwds = { admin: 'nha061106', teacher: 'teach123', student: 'stu123' };
+  
+  document.getElementById('login-email').value = demoEmails[role] || '';
+  document.getElementById('login-password').value = demoPwds[role] || '';
   document.getElementById('recovery-email').value = '';
   document.getElementById('recovery-password').value = '';
   document.getElementById('recovery-confirm').value = '';
@@ -164,33 +167,46 @@ function showLogin() {
   document.getElementById('login-email').focus();
 }
 
-function doLogin() {
+async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
-  const pw = document.getElementById('login-password').value;
+  const pw = document.getElementById('login-password').value.trim();
   const role = selectedRole;
-  let user = null;
+  const alertEl = document.getElementById('login-alert');
 
-  if (role === 'admin') {
-    const a = DB.getObj('admin');
-    if (a.email === email && a.password === pw) user = {...a, role:'admin'};
-  } else if (role === 'teacher') {
-    const t = DB.get('teachers').find(t => t.email===email && t.password===pw);
-    if (t) user = {...t, role:'teacher'};
-  } else {
-    const s = DB.get('students').find(s => s.email===email && s.password===pw);
-    if (s) user = {...s, role:'student'};
+  if (!email || !pw) {
+    alertEl.textContent = 'Please enter email and password.';
+    alertEl.classList.remove('hidden');
+    return;
   }
 
-  if (!user) { document.getElementById('login-alert').classList.remove('hidden'); return; }
-  document.getElementById('login-alert').classList.add('hidden');
-  
-  // Save user and redirect
-  setCurrentUser(user);
-  const redirects = {admin:'admin-dashboard.html', teacher:'teacher-dashboard.html', student:'student-dashboard.html'};
-  window.location.href = redirects[user.role];
+  try {
+    const res = await fetch(`${API_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pw, role })
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      alertEl.classList.add('hidden');
+      setToken(data.token);
+      setCurrentUser(data.user);
+      const redirects = { admin: 'admin-dashboard.html', teacher: 'teacher-dashboard.html', student: 'student-dashboard.html' };
+      window.location.href = redirects[data.user.role] || 'admin-dashboard.html';
+      return;
+    } else {
+      alertEl.textContent = data.message || 'Invalid credentials or role. Please try again.';
+      alertEl.classList.remove('hidden');
+    }
+  } catch (err) {
+    console.warn('Backend API login error:', err);
+    alertEl.textContent = 'Server connection error. Please make sure the server is running.';
+    alertEl.classList.remove('hidden');
+  }
 }
 
-function recoverPassword() {
+async function recoverPassword() {
   const email = document.getElementById('recovery-email').value.trim();
   const newPassword = document.getElementById('recovery-password').value;
   const confirmPassword = document.getElementById('recovery-confirm').value;
@@ -210,37 +226,26 @@ function recoverPassword() {
     return;
   }
 
-  if (selectedRole === 'admin') {
-    const admin = DB.getObj('admin');
-    if (admin.email !== email) {
-      setRecoveryAlert('No admin account found with that email.', 'danger');
-      return;
-    }
-    DB.setObj('admin', {...admin, password: newPassword});
-  } else if (selectedRole === 'teacher') {
-    const teachers = DB.get('teachers');
-    const teacherIndex = teachers.findIndex(t => t.email === email);
-    if (teacherIndex < 0) {
-      setRecoveryAlert('No teacher account found with that email.', 'danger');
-      return;
-    }
-    teachers[teacherIndex] = {...teachers[teacherIndex], password: newPassword};
-    DB.set('teachers', teachers);
-  } else {
-    const students = DB.get('students');
-    const studentIndex = students.findIndex(s => s.email === email);
-    if (studentIndex < 0) {
-      setRecoveryAlert('No student account found with that email.', 'danger');
-      return;
-    }
-    students[studentIndex] = {...students[studentIndex], password: newPassword};
-    DB.set('students', students);
-  }
+  try {
+    const res = await fetch(`${API_URL}/auth/recover-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, newPassword, role: selectedRole })
+    });
 
-  document.getElementById('login-email').value = email;
-  document.getElementById('login-password').value = '';
-  showLogin();
-  setRecoveryAlert('Password recovered. Sign in with your new password.', 'success');
+    const data = await res.json();
+    if (res.ok && data.success) {
+      document.getElementById('login-email').value = email;
+      document.getElementById('login-password').value = '';
+      showLogin();
+      setRecoveryAlert('Password recovered successfully. Sign in with your new password.', 'success');
+    } else {
+      setRecoveryAlert(data.message || 'Password recovery failed.', 'danger');
+    }
+  } catch (err) {
+    console.error('Password recovery error:', err);
+    setRecoveryAlert('Server connection error. Please try again.', 'danger');
+  }
 }
 
 switchRole('admin');
