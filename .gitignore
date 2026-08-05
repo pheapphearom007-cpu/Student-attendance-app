@@ -1,7 +1,10 @@
 server/node_modules/
 server/attendance.db
 server/*.db
+server/.env
+.env
 workflows-demo/
 .DS_Store
 *.log
 node_modules/
+

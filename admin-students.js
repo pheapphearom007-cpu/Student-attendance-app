@@ -18,10 +18,10 @@ pages.manageStudents = function(search='') {
       ${students.map(s=>{
         const cl = classes.find(c=>c.id===s.class_id)||{name:'—'};
         return `<tr>
-          <td><strong style="font-weight:500">${s.name}</strong></td>
-          <td style="color:var(--gray-600)">${s.email}</td>
-          <td><span class="badge badge-excused">${cl.name}</span></td>
-          <td style="color:var(--gray-600)">${s.phone||'—'}</td>
+          <td><strong style="font-weight:500">${escapeHtml(s.name)}</strong></td>
+          <td style="color:var(--gray-600)">${escapeHtml(s.email)}</td>
+          <td><span class="badge badge-excused">${escapeHtml(cl.name)}</span></td>
+          <td style="color:var(--gray-600)">${escapeHtml(s.phone||'—')}</td>
           <td>
             <button class="btn btn-secondary btn-sm" onclick="openStudentModal(${s.id})"><i class="ti ti-edit"></i> Edit</button>
             <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteStudent(${s.id})"><i class="ti ti-trash"></i></button>

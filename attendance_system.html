@@ -206,7 +206,7 @@ async function doLogin() {
   }
 }
 
-function recoverPassword() {
+async function recoverPassword() {
   const email = document.getElementById('recovery-email').value.trim();
   const newPassword = document.getElementById('recovery-password').value;
   const confirmPassword = document.getElementById('recovery-confirm').value;
@@ -226,37 +226,26 @@ function recoverPassword() {
     return;
   }
 
-  if (selectedRole === 'admin') {
-    const admin = DB.getObj('admin');
-    if (admin.email !== email) {
-      setRecoveryAlert('No admin account found with that email.', 'danger');
-      return;
-    }
-    DB.setObj('admin', {...admin, password: newPassword});
-  } else if (selectedRole === 'teacher') {
-    const teachers = DB.get('teachers');
-    const teacherIndex = teachers.findIndex(t => t.email === email);
-    if (teacherIndex < 0) {
-      setRecoveryAlert('No teacher account found with that email.', 'danger');
-      return;
-    }
-    teachers[teacherIndex] = {...teachers[teacherIndex], password: newPassword};
-    DB.set('teachers', teachers);
-  } else {
-    const students = DB.get('students');
-    const studentIndex = students.findIndex(s => s.email === email);
-    if (studentIndex < 0) {
-      setRecoveryAlert('No student account found with that email.', 'danger');
-      return;
-    }
-    students[studentIndex] = {...students[studentIndex], password: newPassword};
-    DB.set('students', students);
-  }
+  try {
+    const res = await fetch(`${API_URL}/auth/recover-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, newPassword, role: selectedRole })
+    });
 
-  document.getElementById('login-email').value = email;
-  document.getElementById('login-password').value = '';
-  showLogin();
-  setRecoveryAlert('Password recovered. Sign in with your new password.', 'success');
+    const data = await res.json();
+    if (res.ok && data.success) {
+      document.getElementById('login-email').value = email;
+      document.getElementById('login-password').value = '';
+      showLogin();
+      setRecoveryAlert('Password recovered successfully. Sign in with your new password.', 'success');
+    } else {
+      setRecoveryAlert(data.message || 'Password recovery failed.', 'danger');
+    }
+  } catch (err) {
+    console.error('Password recovery error:', err);
+    setRecoveryAlert('Server connection error. Please try again.', 'danger');
+  }
 }
 
 switchRole('admin');

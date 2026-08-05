@@ -1,9 +1,19 @@
 // ============================================================
-//  SHARED DATA STORE & UTILITIES (CONNECTED TO BACKEND API)
+//  SHARED DATA STORE & UTILITIES (CONNECTED TO BACKEND REST API)
 // ============================================================
 const API_URL = window.location.protocol.startsWith('http') 
   ? window.location.origin + '/api' 
   : 'http://localhost:5000/api';
+
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 function setToken(token) {
   if (!token) return;
@@ -27,16 +37,6 @@ const DB = {
   get(key) { try { return JSON.parse(localStorage.getItem('atk_'+key)) || []; } catch{ return []; } },
   set(key, val) { 
     localStorage.setItem('atk_'+key, JSON.stringify(val));
-    // Asynchronously push to backend SQLite DB server
-    const token = getToken();
-    fetch(`${API_URL}/sync/${key}`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify(val)
-    }).catch(err => console.warn('Backend sync warning:', err.message));
   },
   getObj(key, def={}) { try { return JSON.parse(localStorage.getItem('atk_'+key)) || def; } catch{ return def; } },
   setObj(key, val) { localStorage.setItem('atk_'+key, JSON.stringify(val)); }
@@ -45,8 +45,12 @@ const DB = {
 let currentUser = null;
 
 async function syncWithBackend() {
+  const token = getToken();
+  if (!token) return;
   try {
-    const res = await fetch(`${API_URL}/db/all`);
+    const res = await fetch(`${API_URL}/db/all`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (res.ok) {
       const data = await res.json();
       if (data.classes) localStorage.setItem('atk_classes', JSON.stringify(data.classes));
@@ -62,38 +66,9 @@ async function syncWithBackend() {
 }
 
 function initData() {
-  syncWithBackend();
-
-  if (!localStorage.getItem('atk_initialized')) {
-    DB.set('classes', [
-      {id:1, name:'Grade 10-A', teacher_id:1},
-      {id:2, name:'Grade 10-B', teacher_id:2},
-      {id:3, name:'Grade 11-A', teacher_id:1},
-    ]);
-    DB.set('teachers', [
-      {id:1, name:'Sarah Johnson', email:'teacher@school.com', password:'teach123', subject:'Mathematics'},
-      {id:2, name:'Mike Chen', email:'mike@school.com', password:'teach456', subject:'Science'},
-    ]);
-    DB.set('students', [
-      {id:1, name:'Alice Smith', email:'student@school.com', password:'stu123', class_id:1, phone:'012-345-6789'},
-      {id:2, name:'Bob Lee', email:'bob@school.com', password:'stu456', class_id:1, phone:'012-345-6790'},
-      {id:3, name:'Carol White', email:'carol@school.com', password:'stu789', class_id:1, phone:'012-345-6791'},
-      {id:4, name:'David Brown', email:'david@school.com', password:'stu000', class_id:2, phone:'012-345-6792'},
-      {id:5, name:'Eva Green', email:'eva@school.com', password:'stu001', class_id:2, phone:'012-345-6793'},
-      {id:6, name:'Frank Kim', email:'frank@school.com', password:'stu002', class_id:3, phone:'012-345-6794'},
-    ]);
-    DB.set('attendance', [
-      {id:1, student_id:1, class_id:1, date:'2025-06-01', status:'present', remark:''},
-      {id:2, student_id:2, class_id:1, date:'2025-06-01', status:'absent', remark:'Sick'},
-      {id:3, student_id:3, class_id:1, date:'2025-06-01', status:'present', remark:''},
-      {id:4, student_id:1, class_id:1, date:'2025-06-02', status:'late', remark:'Traffic'},
-      {id:5, student_id:2, class_id:1, date:'2025-06-02', status:'present', remark:''},
-      {id:6, student_id:3, class_id:1, date:'2025-06-02', status:'excused', remark:'Doctor'},
-      {id:7, student_id:4, class_id:2, date:'2025-06-01', status:'present', remark:''},
-      {id:8, student_id:5, class_id:2, date:'2025-06-01', status:'present', remark:''},
-    ]);
-    DB.setObj('admin', {name:'Admin User', email:'phirom007kh@gmail.com'});
-    localStorage.setItem('atk_initialized','1');
+  const token = getToken();
+  if (token) {
+    syncWithBackend();
   }
 }
 
@@ -203,7 +178,7 @@ function initLayout() {
     items.forEach((item) => {
       const btn = document.createElement('button');
       btn.className = 'nav-item' + (item.page === currentPage ? ' active' : '');
-      btn.innerHTML = `<i class="ti ${item.icon}"></i><span>${item.label}</span>`;
+      btn.innerHTML = `<i class="ti ${item.icon}"></i><span>${escapeHtml(item.label)}</span>`;
       btn.onclick = () => { window.location.href = item.page; };
       nav.appendChild(btn);
     });
@@ -219,7 +194,7 @@ function recentAttTable(att) {
     ${att.map(a=>{
       const s = students.find(x=>x.id===a.student_id)||{name:'Unknown'};
       const c = classes.find(x=>x.id===a.class_id)||{name:'Unknown'};
-      return `<tr><td>${s.name}</td><td>${c.name}</td><td>${a.date}</td><td><span class="badge badge-${a.status}">${a.status}</span></td><td style="color:var(--gray-600);font-size:13px">${a.remark||'—'}</td></tr>`;
+      return `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(c.name)}</td><td>${escapeHtml(a.date)}</td><td><span class="badge badge-${escapeHtml(a.status)}">${escapeHtml(a.status)}</span></td><td style="color:var(--gray-600);font-size:13px">${escapeHtml(a.remark||'—')}</td></tr>`;
     }).join('')}
   </tbody></table>`;
 }
