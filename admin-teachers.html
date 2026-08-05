@@ -52,6 +52,7 @@
 </div>
 
 <script src="shared-utils.js"></script>
+<script src="admin-teachers.js"></script>
 <script>
 if (!checkAuth()) throw new Error('Unauthorized');
 
@@ -61,105 +62,16 @@ function renderTeachers() {
   document.getElementById('teachers-table').innerHTML = teachers.map(t=>{
     const tc = classes.filter(c=>c.teacher_id===t.id);
     return `<tr>
-      <td><strong style="font-weight:500">${t.name}</strong></td>
-      <td style="color:var(--gray-600)">${t.email}</td>
-      <td>${t.subject||'—'}</td>
-      <td>${tc.map(c=>`<span class="badge badge-excused" style="margin-right:4px">${c.name}</span>`).join('')||'—'}</td>
+      <td><strong style="font-weight:500">${escapeHtml(t.name)}</strong></td>
+      <td style="color:var(--gray-600)">${escapeHtml(t.email)}</td>
+      <td>${escapeHtml(t.subject||'—')}</td>
+      <td>${tc.map(c=>`<span class="badge badge-excused" style="margin-right:4px">${escapeHtml(c.name)}</span>`).join('')||'—'}</td>
       <td>
         <button class="btn btn-secondary btn-sm" onclick="openTeacherModal(${t.id})"><i class="ti ti-edit"></i> Edit</button>
         <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteTeacher(${t.id})"><i class="ti ti-trash"></i></button>
       </td>
     </tr>`;
   }).join('')||'<tr><td colspan="5"><div class="empty-state"><i class="ti ti-user-off"></i><p>No teachers yet.</p></div></td></tr>';
-}
-
-function openTeacherModal(id=null) {
-  const t = id ? DB.get('teachers').find(x=>x.id===id) : null;
-  document.getElementById('modal-title').textContent = t ? 'Edit Teacher' : 'Add Teacher';
-  document.getElementById('modal-body').innerHTML = `
-    <div class="form-group"><label>Full Name</label><input id="m-name" value="${t?t.name:''}" placeholder="Full Name"></div>
-    <div class="form-group"><label>Email</label><input id="m-email" type="email" value="${t?t.email:''}" placeholder="Email"></div>
-    <div class="form-group"><label>Password</label><input id="m-pwd" type="password" value="${t?t.password:''}" placeholder="Password"></div>
-    <div class="form-group"><label>Subject</label><input id="m-subj" value="${t?t.subject:''}" placeholder="e.g. Mathematics"></div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button class="btn btn-primary" onclick="saveTeacher(${id||0})"><i class="ti ti-check"></i> Save</button>
-      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-    </div>`;
-  showModal();
-}
-
-async function saveTeacher(id) {
-  const name = document.getElementById('m-name').value.trim();
-  const email = document.getElementById('m-email').value.trim();
-  const pwd = document.getElementById('m-pwd').value;
-  const subject = document.getElementById('m-subj').value.trim();
-
-  if (!name || !email) { alert('Name and email required.'); return; }
-
-  try {
-    const token = getToken();
-    const headers = { 
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
-
-    let res;
-    if (id) {
-      res = await fetch(`${API_URL}/teachers/${id}`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ name, email, password: pwd, subject })
-      });
-    } else {
-      res = await fetch(`${API_URL}/teachers`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ name, email, password: pwd || 'teacher123', subject })
-      });
-    }
-
-    if (!res.ok) {
-      const err = await res.json();
-      alert('Failed to save teacher: ' + (err.error || err.message || 'Unknown error'));
-      return;
-    }
-
-    const saved = await res.json();
-    const teachers = DB.get('teachers');
-    if (id) {
-      const idx = teachers.findIndex(t => t.id === id);
-      if (idx >= 0) teachers[idx] = { ...teachers[idx], ...saved };
-    } else {
-      teachers.push(saved);
-    }
-    DB.set('teachers', teachers);
-    closeModal();
-    renderTeachers();
-  } catch (error) {
-    console.error('Error saving teacher:', error);
-    alert('Failed to connect to backend server.');
-  }
-}
-
-async function deleteTeacher(id) {
-  if (!confirm('Delete this teacher?')) return;
-  try {
-    const token = getToken();
-    const res = await fetch(`${API_URL}/teachers/${id}`, {
-      method: 'DELETE',
-      headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
-    });
-    if (res.ok) {
-      DB.set('teachers', DB.get('teachers').filter(t => t.id !== id));
-      renderTeachers();
-    } else {
-      alert('Failed to delete teacher from server.');
-    }
-  } catch (error) {
-    console.error('Error deleting teacher:', error);
-    DB.set('teachers', DB.get('teachers').filter(t => t.id !== id));
-    renderTeachers();
-  }
 }
 
 renderTeachers();
