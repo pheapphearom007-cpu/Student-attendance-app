@@ -94,6 +94,7 @@ app.get('/', (req, res) => {
 app.post('/api/login', authLimiter, (req, res) => {
   const { email, password, role } = req.body;
   const cleanEmail = (email || '').trim().toLowerCase();
+  const cleanPassword = (password || '').trim();
 
   try {
     let user = null;
@@ -107,7 +108,7 @@ app.post('/api/login', authLimiter, (req, res) => {
       user = db.prepare('SELECT * FROM students WHERE LOWER(email) = ? AND is_deleted = 0').get(cleanEmail);
     }
 
-    if (user && comparePassword(password, user.password)) {
+    if (user && comparePassword(cleanPassword, user.password)) {
       const sanitizedUser = { id: user.id, name: user.name, email: user.email, role: foundRole };
       if (user.subject) sanitizedUser.subject = user.subject;
       if (user.class_id) sanitizedUser.class_id = user.class_id;

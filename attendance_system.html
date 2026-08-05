@@ -169,7 +169,7 @@ function showLogin() {
 
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
-  const pw = document.getElementById('login-password').value;
+  const pw = document.getElementById('login-password').value.trim();
   const role = selectedRole;
   const alertEl = document.getElementById('login-alert');
 
