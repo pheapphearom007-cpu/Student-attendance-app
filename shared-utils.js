@@ -51,6 +51,11 @@ async function syncWithBackend() {
     const res = await fetch(`${API_URL}/db/all`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
+    if (res.status === 401) {
+      removeToken();
+      localStorage.removeItem('atk_currentUser');
+      return;
+    }
     if (res.ok) {
       const data = await res.json();
       if (data.classes) localStorage.setItem('atk_classes', JSON.stringify(data.classes));
@@ -66,8 +71,10 @@ async function syncWithBackend() {
 }
 
 function initData() {
+  const currentPage = window.location.pathname.split('/').pop() || '';
+  const isPublicPage = currentPage === 'attendance_system.html' || currentPage === 'index.html' || currentPage === '';
   const token = getToken();
-  if (token) {
+  if (token && !isPublicPage) {
     syncWithBackend();
   }
 }
@@ -95,6 +102,15 @@ async function verifyBackendToken() {
     const res = await fetch(`${API_URL}/auth/me`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
+    if (res.status === 401) {
+      removeToken();
+      localStorage.removeItem('atk_currentUser');
+      const currentPage = window.location.pathname.split('/').pop() || '';
+      if (currentPage && currentPage !== 'attendance_system.html' && currentPage !== 'index.html') {
+        window.location.href = 'attendance_system.html';
+      }
+      return false;
+    }
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.user) {
@@ -114,7 +130,8 @@ function checkAuth() {
   const token = getToken();
 
   if (!user && !token) {
-    if (!window.location.pathname.endsWith('attendance_system.html') && !window.location.pathname.endsWith('index.html')) {
+    const currentPage = window.location.pathname.split('/').pop() || '';
+    if (currentPage && currentPage !== 'attendance_system.html' && currentPage !== 'index.html') {
       window.location.href = 'attendance_system.html';
     }
     return false;
