@@ -179,6 +179,32 @@ if (ayCount === 0) {
 
 migratePlainPasswords();
 
+function ensureDefaultPasswordsValid() {
+  try {
+    // Reset/Fix Admin Password if invalid
+    const admin = db.prepare('SELECT id, password FROM admin WHERE LOWER(email) = ?').get('phirom007kh@gmail.com');
+    if (admin && (!isHashedPassword(admin.password) || !bcrypt.compareSync('nha061106', admin.password))) {
+      db.prepare('UPDATE admin SET password = ? WHERE id = ?').run(hashPassword('nha061106'), admin.id);
+    }
+
+    // Reset/Fix Teacher Password if invalid
+    const teacher = db.prepare('SELECT id, password FROM teachers WHERE LOWER(email) = ?').get('teacher@school.com');
+    if (teacher && (!isHashedPassword(teacher.password) || !bcrypt.compareSync('teach123', teacher.password))) {
+      db.prepare('UPDATE teachers SET password = ? WHERE id = ?').run(hashPassword('teach123'), teacher.id);
+    }
+
+    // Reset/Fix Student Password if invalid
+    const student = db.prepare('SELECT id, password FROM students WHERE LOWER(email) = ?').get('student@school.com');
+    if (student && (!isHashedPassword(student.password) || !bcrypt.compareSync('stu123', student.password))) {
+      db.prepare('UPDATE students SET password = ? WHERE id = ?').run(hashPassword('stu123'), student.id);
+    }
+  } catch (err) {
+    console.warn('Password verification check warning:', err.message);
+  }
+}
+
+ensureDefaultPasswordsValid();
+
 function logAudit(userId, userRole, action, targetTable, recordId, details) {
   try {
     db.prepare(`

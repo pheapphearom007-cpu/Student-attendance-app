@@ -60,7 +60,7 @@ describe('AttendTrack API & Security Test Suite', () => {
   test('6. Role Authorization - Admin Student Management (Create & Soft Delete)', async () => {
     const newStudent = {
       name: 'Test Student Jest',
-      email: 'testjest@school.com',
+      email: `testjest_${Date.now()}@school.com`,
       password: 'testpassword123',
       class_id: 1,
       phone: '099-888-777'
