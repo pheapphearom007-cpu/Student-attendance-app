@@ -111,7 +111,7 @@ function startRealtimeSync() {
     if (!isPublicPage) {
       syncWithBackend(true);
     }
-  }, 3000);
+  }, 8000);
 }
 
 function initData() {
