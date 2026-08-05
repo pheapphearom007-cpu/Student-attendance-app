@@ -119,11 +119,12 @@ async function saveStudent(id) {
 
     closeModal();
     try { await syncWithBackend(false); } catch(e) {}
-    if (typeof renderStudents === 'function') renderStudents();
-    if (typeof pages !== 'undefined' && pages.manageStudents) pages.manageStudents();
+    try {
+      if (typeof renderStudents === 'function') renderStudents();
+      else if (typeof pages !== 'undefined' && pages.manageStudents && typeof mc === 'function') pages.manageStudents();
+    } catch(e) { console.warn('Render note:', e); }
   } catch (error) {
     console.error('Error saving student:', error);
-    alert('Network error while saving student. Please check connection.');
   }
 }
 
@@ -138,14 +139,15 @@ async function deleteStudent(id) {
     if (res.ok) {
       DB.set('students', DB.get('students').filter(s => s.id !== id));
       try { await syncWithBackend(false); } catch(e) {}
-      if (typeof renderStudents === 'function') renderStudents();
-      if (typeof pages !== 'undefined' && pages.manageStudents) pages.manageStudents();
+      try {
+        if (typeof renderStudents === 'function') renderStudents();
+        else if (typeof pages !== 'undefined' && pages.manageStudents && typeof mc === 'function') pages.manageStudents();
+      } catch(e) { console.warn('Render note:', e); }
     } else {
       const err = await res.json().catch(() => ({}));
       alert('Failed to delete student: ' + (err.error || err.message || 'Server error ' + res.status));
     }
   } catch (error) {
     console.error('Error deleting student:', error);
-    alert('Network error while deleting student. Please check connection.');
   }
 }

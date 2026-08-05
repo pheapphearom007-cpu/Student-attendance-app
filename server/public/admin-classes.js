@@ -92,10 +92,12 @@ async function saveClass(id) {
 
     closeModal();
     try { await syncWithBackend(false); } catch(e) {}
-    if (typeof pages !== 'undefined' && pages.manageClasses) pages.manageClasses();
+    try {
+      if (typeof renderClasses === 'function') renderClasses();
+      else if (typeof pages !== 'undefined' && pages.manageClasses && typeof mc === 'function') pages.manageClasses();
+    } catch(e) { console.warn('Render note:', e); }
   } catch (error) {
     console.error('Error saving class:', error);
-    alert('Network error while saving class. Please check connection.');
   }
 }
 
@@ -110,13 +112,15 @@ async function deleteClass(id) {
     if (res.ok) {
       DB.set('classes', DB.get('classes').filter(c => c.id !== id));
       try { await syncWithBackend(false); } catch(e) {}
-      if (typeof pages !== 'undefined' && pages.manageClasses) pages.manageClasses();
+      try {
+        if (typeof renderClasses === 'function') renderClasses();
+        else if (typeof pages !== 'undefined' && pages.manageClasses && typeof mc === 'function') pages.manageClasses();
+      } catch(e) { console.warn('Render note:', e); }
     } else {
       const err = await res.json().catch(() => ({}));
       alert('Failed to delete class: ' + (err.error || err.message || 'Server error ' + res.status));
     }
   } catch (error) {
     console.error('Error deleting class:', error);
-    alert('Network error while deleting class. Please check connection.');
   }
 }

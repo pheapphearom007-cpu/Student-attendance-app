@@ -109,11 +109,12 @@ async function saveTeacher(id) {
 
     closeModal();
     try { await syncWithBackend(false); } catch(e) {}
-    if (typeof renderTeachers === 'function') renderTeachers();
-    if (typeof pages !== 'undefined' && pages.manageTeachers) pages.manageTeachers();
+    try {
+      if (typeof renderTeachers === 'function') renderTeachers();
+      else if (typeof pages !== 'undefined' && pages.manageTeachers && typeof mc === 'function') pages.manageTeachers();
+    } catch(e) { console.warn('Render note:', e); }
   } catch (error) {
     console.error('Error saving teacher:', error);
-    alert('Network error while saving teacher. Please check connection.');
   }
 }
 
@@ -128,14 +129,15 @@ async function deleteTeacher(id) {
     if (res.ok) {
       DB.set('teachers', DB.get('teachers').filter(t => t.id !== id));
       try { await syncWithBackend(false); } catch(e) {}
-      if (typeof renderTeachers === 'function') renderTeachers();
-      if (typeof pages !== 'undefined' && pages.manageTeachers) pages.manageTeachers();
+      try {
+        if (typeof renderTeachers === 'function') renderTeachers();
+        else if (typeof pages !== 'undefined' && pages.manageTeachers && typeof mc === 'function') pages.manageTeachers();
+      } catch(e) { console.warn('Render note:', e); }
     } else {
       const err = await res.json().catch(() => ({}));
       alert('Failed to delete teacher: ' + (err.error || err.message || 'Server error ' + res.status));
     }
   } catch (error) {
     console.error('Error deleting teacher:', error);
-    alert('Network error while deleting teacher. Please check connection.');
   }
 }
