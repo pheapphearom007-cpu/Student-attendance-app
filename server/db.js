@@ -103,6 +103,10 @@ db.exec(`
     record_id INTEGER,
     details TEXT
   );
+  CREATE TABLE IF NOT EXISTS system_settings (
+    key TEXT PRIMARY KEY,
+    val TEXT
+  );
 `);
 
 // Add is_deleted column to existing databases if missing
@@ -120,61 +124,82 @@ function ensureColumnExists(table, column, typeDef) {
 
 ['teachers', 'classes', 'students', 'attendance'].forEach(t => ensureColumnExists(t, 'is_deleted', 'INTEGER DEFAULT 0'));
 
-// Seed default data if empty
-const adminCount = db.prepare('SELECT COUNT(*) as count FROM admin').get().count;
-if (adminCount === 0) {
+// One-Time Initial Seeding Check
+const isSeeded = db.prepare('SELECT val FROM system_settings WHERE key = ?').get('is_initial_seeded');
+
+if (!isSeeded) {
+  // Seed default Admin if empty
+  const adminCount = db.prepare('SELECT COUNT(*) as count FROM admin').get().count;
+  if (adminCount === 0) {
+    db.prepare('INSERT INTO admin (name, email, password) VALUES (?, ?, ?)').run(
+      'Admin User', 'phirom007kh@gmail.com', hashPassword('nha061106')
+    );
+  }
+
+  // Seed default Teachers if empty
+  const teacherCount = db.prepare('SELECT COUNT(*) as count FROM teachers').get().count;
+  if (teacherCount === 0) {
+    const insertTeacher = db.prepare('INSERT INTO teachers (id, name, email, password, subject) VALUES (?, ?, ?, ?, ?)');
+    insertTeacher.run(1, 'Sarah Johnson', 'teacher@school.com', hashPassword('teach123'), 'Mathematics');
+    insertTeacher.run(2, 'Mike Chen', 'mike@school.com', hashPassword('teach456'), 'Science');
+  }
+
+  // Seed default Classes if empty
+  const classCount = db.prepare('SELECT COUNT(*) as count FROM classes').get().count;
+  if (classCount === 0) {
+    const insertClass = db.prepare('INSERT INTO classes (id, name, teacher_id) VALUES (?, ?, ?)');
+    insertClass.run(1, 'Grade 10-A', 1);
+    insertClass.run(2, 'Grade 10-B', 2);
+    insertClass.run(3, 'Grade 11-A', 1);
+  }
+
+  // Seed default Students if empty
+  const studentCount = db.prepare('SELECT COUNT(*) as count FROM students').get().count;
+  if (studentCount === 0) {
+    const insertStudent = db.prepare('INSERT INTO students (id, name, email, password, class_id, phone) VALUES (?, ?, ?, ?, ?, ?)');
+    insertStudent.run(1, 'Alice Smith', 'student@school.com', hashPassword('stu123'), 1, '012-345-6789');
+    insertStudent.run(2, 'Bob Lee', 'bob@school.com', hashPassword('stu456'), 1, '012-345-6790');
+    insertStudent.run(3, 'Carol White', 'carol@school.com', hashPassword('stu789'), 1, '012-345-6791');
+    insertStudent.run(4, 'David Brown', 'david@school.com', hashPassword('stu000'), 2, '012-345-6792');
+    insertStudent.run(5, 'Eva Green', 'eva@school.com', hashPassword('stu001'), 2, '012-345-6793');
+    insertStudent.run(6, 'Frank Kim', 'frank@school.com', hashPassword('stu002'), 3, '012-345-6794');
+  }
+
+  // Seed default Attendance if empty
+  const attCount = db.prepare('SELECT COUNT(*) as count FROM attendance').get().count;
+  if (attCount === 0) {
+    const insertAtt = db.prepare('INSERT INTO attendance (id, student_id, class_id, date, status, remark) VALUES (?, ?, ?, ?, ?, ?)');
+    insertAtt.run(1, 1, 1, '2025-06-01', 'present', '');
+    insertAtt.run(2, 2, 1, '2025-06-01', 'absent', 'Sick');
+    insertAtt.run(3, 3, 1, '2025-06-01', 'present', '');
+    insertAtt.run(4, 1, 1, '2025-06-02', 'late', 'Traffic');
+    insertAtt.run(5, 2, 1, '2025-06-02', 'present', '');
+    insertAtt.run(6, 3, 1, '2025-06-02', 'excused', 'Doctor');
+    insertAtt.run(7, 4, 2, '2025-06-01', 'present', '');
+    insertAtt.run(8, 5, 2, '2025-06-01', 'present', '');
+  }
+
+  // Seed Academic Years if empty
+  const ayCount = db.prepare('SELECT COUNT(*) as count FROM academic_years').get().count;
+  if (ayCount === 0) {
+    const insertAY = db.prepare('INSERT INTO academic_years (id, name, start_date, end_date, is_active) VALUES (?, ?, ?, ?, ?)');
+    insertAY.run(1, '2025-2026 Academic Year', '2025-09-01', '2026-06-30', 1);
+
+    const insertSem = db.prepare('INSERT INTO semesters (id, academic_year_id, name, start_date, end_date) VALUES (?, ?, ?, ?, ?)');
+    insertSem.run(1, 1, 'Semester 1 (Fall)', '2025-09-01', '2026-01-31');
+    insertSem.run(2, 1, 'Semester 2 (Spring)', '2026-02-01', '2026-06-30');
+  }
+
+  // Mark database as initialized so seeding never runs again
+  db.prepare('INSERT OR REPLACE INTO system_settings (key, val) VALUES (?, ?)').run('is_initial_seeded', '1');
+}
+
+// Ensure Admin account exists if no admin accounts exist
+const ensureAdmin = db.prepare('SELECT COUNT(*) as count FROM admin').get().count;
+if (ensureAdmin === 0) {
   db.prepare('INSERT INTO admin (name, email, password) VALUES (?, ?, ?)').run(
     'Admin User', 'phirom007kh@gmail.com', hashPassword('nha061106')
   );
-}
-
-const teacherCount = db.prepare('SELECT COUNT(*) as count FROM teachers').get().count;
-if (teacherCount === 0) {
-  const insertTeacher = db.prepare('INSERT INTO teachers (id, name, email, password, subject) VALUES (?, ?, ?, ?, ?)');
-  insertTeacher.run(1, 'Sarah Johnson', 'teacher@school.com', hashPassword('teach123'), 'Mathematics');
-  insertTeacher.run(2, 'Mike Chen', 'mike@school.com', hashPassword('teach456'), 'Science');
-}
-
-const classCount = db.prepare('SELECT COUNT(*) as count FROM classes').get().count;
-if (classCount === 0) {
-  const insertClass = db.prepare('INSERT INTO classes (id, name, teacher_id) VALUES (?, ?, ?)');
-  insertClass.run(1, 'Grade 10-A', 1);
-  insertClass.run(2, 'Grade 10-B', 2);
-  insertClass.run(3, 'Grade 11-A', 1);
-}
-
-const studentCount = db.prepare('SELECT COUNT(*) as count FROM students').get().count;
-if (studentCount === 0) {
-  const insertStudent = db.prepare('INSERT INTO students (id, name, email, password, class_id, phone) VALUES (?, ?, ?, ?, ?, ?)');
-  insertStudent.run(1, 'Alice Smith', 'student@school.com', hashPassword('stu123'), 1, '012-345-6789');
-  insertStudent.run(2, 'Bob Lee', 'bob@school.com', hashPassword('stu456'), 1, '012-345-6790');
-  insertStudent.run(3, 'Carol White', 'carol@school.com', hashPassword('stu789'), 1, '012-345-6791');
-  insertStudent.run(4, 'David Brown', 'david@school.com', hashPassword('stu000'), 2, '012-345-6792');
-  insertStudent.run(5, 'Eva Green', 'eva@school.com', hashPassword('stu001'), 2, '012-345-6793');
-  insertStudent.run(6, 'Frank Kim', 'frank@school.com', hashPassword('stu002'), 3, '012-345-6794');
-}
-
-const attCount = db.prepare('SELECT COUNT(*) as count FROM attendance').get().count;
-if (attCount === 0) {
-  const insertAtt = db.prepare('INSERT INTO attendance (id, student_id, class_id, date, status, remark) VALUES (?, ?, ?, ?, ?, ?)');
-  insertAtt.run(1, 1, 1, '2025-06-01', 'present', '');
-  insertAtt.run(2, 2, 1, '2025-06-01', 'absent', 'Sick');
-  insertAtt.run(3, 3, 1, '2025-06-01', 'present', '');
-  insertAtt.run(4, 1, 1, '2025-06-02', 'late', 'Traffic');
-  insertAtt.run(5, 2, 1, '2025-06-02', 'present', '');
-  insertAtt.run(6, 3, 1, '2025-06-02', 'excused', 'Doctor');
-  insertAtt.run(7, 4, 2, '2025-06-01', 'present', '');
-  insertAtt.run(8, 5, 2, '2025-06-01', 'present', '');
-}
-
-const ayCount = db.prepare('SELECT COUNT(*) as count FROM academic_years').get().count;
-if (ayCount === 0) {
-  const insertAY = db.prepare('INSERT INTO academic_years (id, name, start_date, end_date, is_active) VALUES (?, ?, ?, ?, ?)');
-  insertAY.run(1, '2025-2026 Academic Year', '2025-09-01', '2026-06-30', 1);
-
-  const insertSem = db.prepare('INSERT INTO semesters (id, academic_year_id, name, start_date, end_date) VALUES (?, ?, ?, ?, ?)');
-  insertSem.run(1, 1, 'Semester 1 (Fall)', '2025-09-01', '2026-01-31');
-  insertSem.run(2, 1, 'Semester 2 (Spring)', '2026-02-01', '2026-06-30');
 }
 
 migratePlainPasswords();
