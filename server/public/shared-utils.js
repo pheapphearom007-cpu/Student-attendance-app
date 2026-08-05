@@ -58,23 +58,21 @@ let lastDataHash = '';
 let syncIntervalId = null;
 
 function triggerActivePageRender() {
-  if (typeof renderDashboard === 'function') renderDashboard();
-  if (typeof renderStudents === 'function') renderStudents();
-  if (typeof renderTeachers === 'function') renderTeachers();
-  if (typeof renderClasses === 'function') renderClasses();
-  if (typeof renderReports === 'function') renderReports();
-  if (typeof renderTeacherAttendance === 'function') renderTeacherAttendance();
-  if (typeof renderTeacherHistory === 'function') renderTeacherHistory();
-  if (typeof renderTeacherReports === 'function') renderTeacherReports();
-  if (typeof renderTeacherDashboard === 'function') renderTeacherDashboard();
-  if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
-  if (typeof renderStudentAttendance === 'function') renderStudentAttendance();
-  if (typeof renderStudentStats === 'function') renderStudentStats();
-  if (typeof pages !== 'undefined') {
-    const currentPage = window.location.pathname.split('/').pop() || '';
-    if (currentPage === 'admin-students.html' && pages.manageStudents) pages.manageStudents();
-    if (currentPage === 'admin-teachers.html' && pages.manageTeachers) pages.manageTeachers();
-    if (currentPage === 'admin-classes.html' && pages.manageClasses) pages.manageClasses();
+  try {
+    if (typeof renderDashboard === 'function') renderDashboard();
+    if (typeof renderStudents === 'function') renderStudents();
+    if (typeof renderTeachers === 'function') renderTeachers();
+    if (typeof renderClasses === 'function') renderClasses();
+    if (typeof renderReports === 'function') renderReports();
+    if (typeof renderTeacherAttendance === 'function') renderTeacherAttendance();
+    if (typeof renderTeacherHistory === 'function') renderTeacherHistory();
+    if (typeof renderTeacherReports === 'function') renderTeacherReports();
+    if (typeof renderTeacherDashboard === 'function') renderTeacherDashboard();
+    if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
+    if (typeof renderStudentAttendance === 'function') renderStudentAttendance();
+    if (typeof renderStudentStats === 'function') renderStudentStats();
+  } catch (e) {
+    console.warn('Realtime render notice:', e);
   }
 }
 
@@ -122,7 +120,7 @@ function startRealtimeSync() {
     if (!isPublicPage) {
       syncWithBackend(true);
     }
-  }, 8000);
+  }, 4000);
 }
 
 function initData() {
