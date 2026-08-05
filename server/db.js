@@ -179,43 +179,6 @@ if (ayCount === 0) {
 
 migratePlainPasswords();
 
-function ensureDefaultPasswordsValid() {
-  try {
-    // Ensure Admin Account Exists & Password Valid
-    let admin = db.prepare('SELECT id, password FROM admin WHERE LOWER(email) = ?').get('phirom007kh@gmail.com');
-    if (!admin) {
-      const anyAdmin = db.prepare('SELECT id FROM admin LIMIT 1').get();
-      if (anyAdmin) {
-        db.prepare('UPDATE admin SET email = ?, password = ? WHERE id = ?').run('phirom007kh@gmail.com', hashPassword('nha061106'), anyAdmin.id);
-      } else {
-        db.prepare('INSERT INTO admin (name, email, password) VALUES (?, ?, ?)').run('Admin User', 'phirom007kh@gmail.com', hashPassword('nha061106'));
-      }
-    } else {
-      db.prepare('UPDATE admin SET password = ? WHERE id = ?').run(hashPassword('nha061106'), admin.id);
-    }
-
-    // Ensure Teacher Account Exists & Password Valid
-    let teacher = db.prepare('SELECT id FROM teachers WHERE LOWER(email) = ?').get('teacher@school.com');
-    if (!teacher) {
-      db.prepare('INSERT INTO teachers (name, email, password, subject, is_deleted) VALUES (?, ?, ?, ?, 0)').run('Sarah Johnson', 'teacher@school.com', hashPassword('teach123'), 'Mathematics');
-    } else {
-      db.prepare('UPDATE teachers SET password = ? WHERE id = ?').run(hashPassword('teach123'), teacher.id);
-    }
-
-    // Ensure Student Account Exists & Password Valid
-    let student = db.prepare('SELECT id FROM students WHERE LOWER(email) = ?').get('student@school.com');
-    if (!student) {
-      db.prepare('INSERT INTO students (name, email, password, class_id, phone, is_deleted) VALUES (?, ?, ?, 1, ?, 0)').run('Alice Smith', 'student@school.com', hashPassword('stu123'), '012-345-6789');
-    } else {
-      db.prepare('UPDATE students SET password = ? WHERE id = ?').run(hashPassword('stu123'), student.id);
-    }
-  } catch (err) {
-    console.warn('Password verification check warning:', err.message);
-  }
-}
-
-ensureDefaultPasswordsValid();
-
 function logAudit(userId, userRole, action, targetTable, recordId, details) {
   try {
     db.prepare(`

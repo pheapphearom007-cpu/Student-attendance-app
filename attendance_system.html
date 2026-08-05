@@ -118,11 +118,8 @@ function switchRole(role) {
   document.querySelectorAll('.login-tab').forEach((t,i)=>t.classList.toggle('active',['admin','teacher','student'][i]===role));
   clearAuthAlerts();
   
-  const demoEmails = { admin: 'phirom007kh@gmail.com', teacher: 'teacher@school.com', student: 'student@school.com' };
-  const demoPwds = { admin: 'nha061106', teacher: 'teach123', student: 'stu123' };
-  
-  document.getElementById('login-email').value = demoEmails[role] || '';
-  document.getElementById('login-password').value = demoPwds[role] || '';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
   document.getElementById('recovery-email').value = '';
   document.getElementById('recovery-password').value = '';
   document.getElementById('recovery-confirm').value = '';

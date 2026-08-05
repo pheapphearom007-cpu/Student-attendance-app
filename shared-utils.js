@@ -43,8 +43,31 @@ const DB = {
 };
 
 let currentUser = null;
+let lastDataHash = '';
+let syncIntervalId = null;
 
-async function syncWithBackend() {
+function triggerActivePageRender() {
+  if (typeof renderDashboard === 'function') renderDashboard();
+  if (typeof renderStudents === 'function') renderStudents();
+  if (typeof renderTeachers === 'function') renderTeachers();
+  if (typeof renderClasses === 'function') renderClasses();
+  if (typeof renderReports === 'function') renderReports();
+  if (typeof renderTeacherAttendance === 'function') renderTeacherAttendance();
+  if (typeof renderTeacherHistory === 'function') renderTeacherHistory();
+  if (typeof renderTeacherReports === 'function') renderTeacherReports();
+  if (typeof renderTeacherDashboard === 'function') renderTeacherDashboard();
+  if (typeof renderStudentDashboard === 'function') renderStudentDashboard();
+  if (typeof renderStudentAttendance === 'function') renderStudentAttendance();
+  if (typeof renderStudentStats === 'function') renderStudentStats();
+  if (typeof pages !== 'undefined') {
+    const currentPage = window.location.pathname.split('/').pop() || '';
+    if (currentPage === 'admin-students.html' && pages.manageStudents) pages.manageStudents();
+    if (currentPage === 'admin-teachers.html' && pages.manageTeachers) pages.manageTeachers();
+    if (currentPage === 'admin-classes.html' && pages.manageClasses) pages.manageClasses();
+  }
+}
+
+async function syncWithBackend(triggerRender = false) {
   const token = getToken();
   if (!token) return;
   try {
@@ -57,17 +80,38 @@ async function syncWithBackend() {
       return;
     }
     if (res.ok) {
-      const data = await res.json();
-      if (data.classes) localStorage.setItem('atk_classes', JSON.stringify(data.classes));
-      if (data.teachers) localStorage.setItem('atk_teachers', JSON.stringify(data.teachers));
-      if (data.students) localStorage.setItem('atk_students', JSON.stringify(data.students));
-      if (data.attendance) localStorage.setItem('atk_attendance', JSON.stringify(data.attendance));
-      if (data.admin) localStorage.setItem('atk_admin', JSON.stringify(data.admin));
-      localStorage.setItem('atk_initialized', '1');
+      const text = await res.text();
+      if (text !== lastDataHash) {
+        const isInitial = !lastDataHash;
+        lastDataHash = text;
+        const data = JSON.parse(text);
+        if (data.classes) localStorage.setItem('atk_classes', JSON.stringify(data.classes));
+        if (data.teachers) localStorage.setItem('atk_teachers', JSON.stringify(data.teachers));
+        if (data.students) localStorage.setItem('atk_students', JSON.stringify(data.students));
+        if (data.attendance) localStorage.setItem('atk_attendance', JSON.stringify(data.attendance));
+        if (data.admin) localStorage.setItem('atk_admin', JSON.stringify(data.admin));
+        localStorage.setItem('atk_initialized', '1');
+        if (triggerRender && !isInitial) {
+          triggerActivePageRender();
+        }
+      }
     }
   } catch (err) {
     console.warn('Backend API server not reachable, using local storage cache.');
   }
+}
+
+function startRealtimeSync() {
+  if (syncIntervalId) clearInterval(syncIntervalId);
+  const token = getToken();
+  if (!token) return;
+  syncIntervalId = setInterval(() => {
+    const currentPage = window.location.pathname.split('/').pop() || '';
+    const isPublicPage = currentPage === 'attendance_system.html' || currentPage === 'index.html' || currentPage === '';
+    if (!isPublicPage) {
+      syncWithBackend(true);
+    }
+  }, 3000);
 }
 
 function initData() {
@@ -76,6 +120,7 @@ function initData() {
   const token = getToken();
   if (token && !isPublicPage) {
     syncWithBackend();
+    startRealtimeSync();
   }
 }
 
@@ -90,6 +135,7 @@ function setCurrentUser(user) {
 }
 
 function logout() {
+  if (syncIntervalId) clearInterval(syncIntervalId);
   removeToken();
   localStorage.removeItem('atk_currentUser');
   window.location.href = 'attendance_system.html';
