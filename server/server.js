@@ -453,7 +453,7 @@ app.post('/api/attendance', authenticateToken, requireRole('admin', 'teacher'), 
 });
 
 app.post('/api/attendance/bulk', authenticateToken, requireRole('admin', 'teacher'), (req, res) => {
-  const records = req.body;
+  const records = Array.isArray(req.body) ? req.body : (req.body && Array.isArray(req.body.records) ? req.body.records : null);
   if (!Array.isArray(records) || records.length === 0) {
     return res.status(400).json({ error: 'Array of attendance records required.' });
   }
