@@ -92,18 +92,28 @@ async function saveTeacher(id) {
     }
 
     if (!res.ok) {
-      const err = await res.json();
-      alert('Failed to save teacher: ' + (err.error || err.message || 'Unknown error'));
+      const err = await res.json().catch(() => ({}));
+      alert('Failed to save teacher: ' + (err.error || err.message || 'Server error ' + res.status));
       return;
     }
 
+    const saved = await res.json().catch(() => ({}));
+    const teachers = DB.get('teachers');
+    if (id) {
+      const idx = teachers.findIndex(t => t.id === id);
+      if (idx >= 0) teachers[idx] = { ...teachers[idx], ...saved, name, email, subject };
+    } else if (saved && saved.id) {
+      teachers.push(saved);
+    }
+    DB.set('teachers', teachers);
+
     closeModal();
-    await syncWithBackend(true);
+    try { await syncWithBackend(false); } catch(e) {}
     if (typeof renderTeachers === 'function') renderTeachers();
     if (typeof pages !== 'undefined' && pages.manageTeachers) pages.manageTeachers();
   } catch (error) {
     console.error('Error saving teacher:', error);
-    alert('Failed to connect to backend server.');
+    alert('Network error while saving teacher. Please check connection.');
   }
 }
 
@@ -116,14 +126,16 @@ async function deleteTeacher(id) {
       headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
     });
     if (res.ok) {
-      await syncWithBackend(true);
+      DB.set('teachers', DB.get('teachers').filter(t => t.id !== id));
+      try { await syncWithBackend(false); } catch(e) {}
       if (typeof renderTeachers === 'function') renderTeachers();
       if (typeof pages !== 'undefined' && pages.manageTeachers) pages.manageTeachers();
     } else {
-      alert('Failed to delete teacher from server.');
+      const err = await res.json().catch(() => ({}));
+      alert('Failed to delete teacher: ' + (err.error || err.message || 'Server error ' + res.status));
     }
   } catch (error) {
     console.error('Error deleting teacher:', error);
-    alert('Failed to connect to backend server.');
+    alert('Network error while deleting teacher. Please check connection.');
   }
 }

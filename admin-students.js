@@ -102,18 +102,28 @@ async function saveStudent(id) {
     }
 
     if (!res.ok) {
-      const err = await res.json();
-      alert('Failed to save student: ' + (err.error || err.message || 'Unknown error'));
+      const err = await res.json().catch(() => ({}));
+      alert('Failed to save student: ' + (err.error || err.message || 'Server error ' + res.status));
       return;
     }
 
+    const saved = await res.json().catch(() => ({}));
+    const students = DB.get('students');
+    if (id) {
+      const idx = students.findIndex(s => s.id === id);
+      if (idx >= 0) students[idx] = { ...students[idx], ...saved, name, email, class_id, phone };
+    } else if (saved && saved.id) {
+      students.push(saved);
+    }
+    DB.set('students', students);
+
     closeModal();
-    await syncWithBackend(true);
+    try { await syncWithBackend(false); } catch(e) {}
     if (typeof renderStudents === 'function') renderStudents();
     if (typeof pages !== 'undefined' && pages.manageStudents) pages.manageStudents();
   } catch (error) {
     console.error('Error saving student:', error);
-    alert('Failed to connect to backend server.');
+    alert('Network error while saving student. Please check connection.');
   }
 }
 
@@ -126,14 +136,16 @@ async function deleteStudent(id) {
       headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
     });
     if (res.ok) {
-      await syncWithBackend(true);
+      DB.set('students', DB.get('students').filter(s => s.id !== id));
+      try { await syncWithBackend(false); } catch(e) {}
       if (typeof renderStudents === 'function') renderStudents();
       if (typeof pages !== 'undefined' && pages.manageStudents) pages.manageStudents();
     } else {
-      alert('Failed to delete student from backend server.');
+      const err = await res.json().catch(() => ({}));
+      alert('Failed to delete student: ' + (err.error || err.message || 'Server error ' + res.status));
     }
   } catch (error) {
     console.error('Error deleting student:', error);
-    alert('Failed to connect to backend server.');
+    alert('Network error while deleting student. Please check connection.');
   }
 }

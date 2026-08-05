@@ -75,17 +75,27 @@ async function saveClass(id) {
     }
 
     if (!res.ok) {
-      const err = await res.json();
-      alert('Failed to save class: ' + (err.error || err.message || 'Unknown error'));
+      const err = await res.json().catch(() => ({}));
+      alert('Failed to save class: ' + (err.error || err.message || 'Server error ' + res.status));
       return;
     }
 
+    const saved = await res.json().catch(() => ({}));
+    const classes = DB.get('classes');
+    if (id) {
+      const idx = classes.findIndex(c => c.id === id);
+      if (idx >= 0) classes[idx] = { ...classes[idx], ...saved, name, teacher_id };
+    } else if (saved && saved.id) {
+      classes.push(saved);
+    }
+    DB.set('classes', classes);
+
     closeModal();
-    await syncWithBackend(true);
+    try { await syncWithBackend(false); } catch(e) {}
     if (typeof pages !== 'undefined' && pages.manageClasses) pages.manageClasses();
   } catch (error) {
     console.error('Error saving class:', error);
-    alert('Failed to connect to backend server.');
+    alert('Network error while saving class. Please check connection.');
   }
 }
 
@@ -98,13 +108,15 @@ async function deleteClass(id) {
       headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
     });
     if (res.ok) {
-      await syncWithBackend(true);
+      DB.set('classes', DB.get('classes').filter(c => c.id !== id));
+      try { await syncWithBackend(false); } catch(e) {}
       if (typeof pages !== 'undefined' && pages.manageClasses) pages.manageClasses();
     } else {
-      alert('Failed to delete class from server.');
+      const err = await res.json().catch(() => ({}));
+      alert('Failed to delete class: ' + (err.error || err.message || 'Server error ' + res.status));
     }
   } catch (error) {
     console.error('Error deleting class:', error);
-    alert('Failed to connect to backend server.');
+    alert('Network error while deleting class. Please check connection.');
   }
 }
